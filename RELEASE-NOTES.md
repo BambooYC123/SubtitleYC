@@ -16,7 +16,8 @@ This is the first public testing release of SubtitleYC for 64-bit Windows.
 
 - CPU is the safest default and does not require an Nvidia GPU.
 - CUDA 12.9 is for supported Nvidia GTX 16 through RTX 50 systems.
-- CUDA 11.8 is optional and appears only when a legacy build is published.
+- CUDA 11.8 is not included in this beta. Nvidia GTX 10 users should use the
+  CPU edition.
 
 Installing another edition replaces the app and OCR runtime while preserving
 the user's workspace under `%LOCALAPPDATA%\SubtitleYC\workspace`.
