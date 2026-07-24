@@ -1,0 +1,183 @@
+﻿SubtitleYC End User License Agreement
+=====================================
+
+Effective date: 21 July 2026
+
+This End User License Agreement ("EULA") is a legal agreement between you and
+the copyright holder and lawful publisher of SubtitleYC ("Licensor") for the
+SubtitleYC application, its original code, user interface, documentation, and
+assets (collectively, the "Software").
+
+The Software includes separately licensed third-party components. Those
+components are not relicensed by this EULA. See Section 5 and
+THIRD-PARTY-NOTICES.txt.
+
+If the Software is identified as an alpha, beta, preview, or prerelease build,
+the SubtitleYC Beta Terms in BETA-TERMS.txt also apply and form part of this
+EULA.
+
+1. Acceptance
+-------------
+
+By installing, copying, or using the Software, you agree to this EULA. If you
+do not agree, do not install or use the Software. Nothing in this EULA excludes,
+restricts, or modifies rights or remedies that cannot lawfully be excluded,
+including applicable rights under the Australian Consumer Law.
+
+2. Licence Grant
+----------------
+
+Subject to this EULA and any purchase terms supplied when you obtained the
+Software, Licensor grants you a limited, non-exclusive, non-transferable, and
+non-sublicensable licence to:
+
+- install and use the Software for personal or internal business purposes;
+- for an individual licence, use it on devices owned or controlled by the
+  licensed individual; and
+- for an organisation licence, permit use by no more than the number of users
+  or seats lawfully acquired by that organisation.
+
+The licence applies to the version obtained and any update that Licensor makes
+available to you under the same licence. Ownership of the Software is not sold
+or transferred.
+
+3. Restrictions
+---------------
+
+Except where this EULA, an applicable third-party licence, or mandatory law
+expressly permits it, you must not:
+
+- copy or distribute the Software to another person;
+- sell, rent, lease, sublicense, publish, or commercially host the Software;
+- modify, adapt, translate, or create derivative works from SubtitleYC's
+  original code or assets;
+- reverse engineer, decompile, or disassemble SubtitleYC's original code;
+- bypass licence, security, access-control, or update mechanisms; or
+- remove copyright, trade mark, attribution, or licence notices.
+
+These restrictions do not limit rights that applicable law cannot restrict.
+They also do not prohibit reverse engineering required to debug modifications
+to LGPL-covered libraries, or any act permitted for a third-party component by
+that component's own licence.
+
+4. User Content and Responsible Use
+-----------------------------------
+
+You retain responsibility for videos, subtitles, URLs, credentials, and other
+content you process with the Software. You must have all rights and permissions
+required to access, download, copy, edit, and distribute that content. You must
+not use the Software to violate copyright, privacy, access controls, platform
+terms, or other applicable law.
+
+The Software may invoke third-party services and tools, including video
+websites and yt-dlp. Availability and behaviour of those services are outside
+Licensor's control.
+
+5. Third-Party Software
+-----------------------
+
+VideOCR, yt-dlp, FFmpeg, Qt/PySide, Python packages, and other third-party
+components remain governed by their respective licence terms. This EULA does
+not reduce, replace, or restrict any rights granted under those terms.
+
+Copyright notices, licence texts, source information, and attribution for
+bundled components are provided in THIRD-PARTY-NOTICES.txt and the licenses
+directory installed with the Software.
+
+6. Updates, Compatibility, and Support
+--------------------------------------
+
+Licensor may provide updates, fixes, or new versions but is not required to do
+so unless separate purchase terms expressly say otherwise. Websites, media
+formats, drivers, operating systems, yt-dlp, VideOCR, and other dependencies
+may change and may affect compatibility.
+
+No support level or response time is promised unless stated in separate written
+support terms.
+
+7. Ownership
+------------
+
+Licensor and its licensors retain all rights, title, and interest in
+SubtitleYC's original code and assets. All rights not expressly granted by this
+EULA are reserved. Third-party ownership and open-source rights remain
+unchanged.
+
+8. Termination
+--------------
+
+This EULA remains effective until terminated. Your licence terminates if you
+materially breach this EULA and do not remedy the breach where the law requires
+an opportunity to do so. On termination, you must stop using and delete the
+Software, except for third-party materials you may retain under their own
+licences.
+
+9. Disclaimer
+-------------
+
+To the maximum extent permitted by law, and subject to Section 11, the Software
+is provided "as is" and "as available". Licensor does not guarantee that OCR
+results will be accurate, that downloads will remain available, or that the
+Software will be uninterrupted or error-free.
+
+You should review generated subtitles and maintain backups of important media,
+project, and subtitle files.
+
+10. Limitation of Liability
+---------------------------
+
+To the maximum extent permitted by law, and subject to Section 11, Licensor is
+not liable for indirect, incidental, special, exemplary, or consequential loss,
+or for loss of data, revenue, profit, goodwill, or business opportunity arising
+from use of the Software.
+
+Where liability may lawfully be limited, Licensor's aggregate liability arising
+from the Software will not exceed the amount you paid for the Software during
+the 12 months before the event giving rise to the claim. This limitation does
+not apply where liability cannot lawfully be excluded or limited.
+
+11. Australian Consumer Law and Other Mandatory Rights
+------------------------------------------------------
+
+Nothing in this EULA excludes, restricts, or modifies any consumer guarantee,
+right, remedy, or liability that cannot be excluded, restricted, or modified
+under the Australian Consumer Law or other applicable law.
+
+If a mandatory guarantee applies and Licensor is entitled to limit its remedy,
+the remedy will be limited only in a manner permitted by applicable law.
+
+12. Beta and Prerelease Versions
+--------------------------------
+
+An alpha, beta, preview, or prerelease version may be incomplete, may contain
+defects, and may change before a production release. Unless the release page
+expressly states an expiry date, your licence to keep using the particular
+prerelease version you obtained does not expire, subject to this EULA.
+Licensor may stop distributing or supporting a prerelease version at any time.
+
+A free prerelease licence does not include or promise access to future
+versions, paid editions, hosted services, updates, or support. Any future paid
+product will be offered under the purchase and licence terms stated for that
+product.
+
+Feedback is voluntary. You retain ownership of feedback you provide, but grant
+Licensor a worldwide, perpetual, irrevocable, non-exclusive, royalty-free
+licence to use, reproduce, adapt, and incorporate that feedback into
+SubtitleYC and related products without compensation or attribution. This does
+not grant Licensor ownership of videos, subtitles, or other user content.
+
+13. General
+-----------
+
+If a provision of this EULA is unenforceable, it will be enforced to the
+greatest extent permitted and the remaining provisions will continue. A failure
+to enforce a provision is not a waiver. This EULA and any purchase terms form
+the agreement concerning your licence to SubtitleYC, while each third-party
+component remains subject to its own licence.
+
+Questions about this EULA should be directed through the support or contact
+channel published with the Software. The release page identifies the publisher
+and current contact channel for the copy you obtained.
+
+Copyright (c) 2026 SubtitleYC. All rights reserved.
+

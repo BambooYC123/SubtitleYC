@@ -1,0 +1,77 @@
+﻿SubtitleYC Third-Party Notices
+==============================
+
+SubtitleYC uses and, in bundled Windows releases, redistributes third-party
+software. Each component remains the property of its respective copyright
+holders and is provided under its own license. No endorsement is implied.
+
+VideOCR
+--------
+Project: https://github.com/timminator/VideOCR
+Version bundled by current Windows editions: 1.5.1
+Copyright (c) 2019 Yi Ge
+License: MIT
+Full text: licenses/VideOCR-MIT.txt
+
+SubtitleYC invokes the VideOCR command-line runtime for burned-in subtitle OCR.
+
+yt-dlp
+------
+Project: https://github.com/yt-dlp/yt-dlp
+Version bundled by the current Windows build: 2026.7.4
+License: The Unlicense
+Full text: licenses/yt-dlp-Unlicense.txt
+
+FFmpeg and ffprobe
+------------------
+Project: https://ffmpeg.org/
+Build provider: https://www.gyan.dev/ffmpeg/builds/
+Bundled build at the time of this notice: Gyan FFmpeg 8.1.2 full shared build
+License reported by that build: GNU GPL version 3 or later
+Full text: licenses/GPL-3.0.txt
+Executable SHA-256 recorded for the current reference build:
+  9be30133edcc5786f16e632d57e2dab5b259fea9a5243ba99758ca3adc110bd9
+Exact FFmpeg source commit for the reference 8.1.2 build:
+  https://github.com/FFmpeg/FFmpeg/commit/38b88335f9
+Direct corresponding FFmpeg source archive:
+  https://github.com/FFmpeg/FFmpeg/archive/38b88335f9.zip
+Build provider and general FFmpeg source information:
+  https://www.gyan.dev/ffmpeg/builds/
+  https://ffmpeg.org/download.html#get-sources
+
+The reference build reports --enable-gpl and --enable-version3. Windows release
+builds generate licenses/FFmpeg-build/BUILD-INFO.txt from the exact executable,
+including its version, hashes, and complete configure line. Release builders
+must verify the license and corresponding-source offer for the exact binaries
+they bundle.
+
+Qt for Python / PySide6 / Shiboken6
+-----------------------------------
+Project: https://www.qt.io/qt-for-python
+Version used by the current Windows build: 6.11.1
+Open-source license option: GNU Lesser General Public License version 3
+Full texts: licenses/LGPL-3.0.txt and licenses/GPL-3.0.txt
+
+The Qt libraries are shipped as replaceable shared libraries. SubtitleYC does
+not prohibit reverse engineering needed to debug modifications to LGPL-covered
+libraries. Qt and Qt WebEngine contain additional third-party components. See:
+  https://doc.qt.io/qtforpython-6/licenses.html
+  https://doc.qt.io/qt-6/qtwebengine-3rdparty.html
+
+Python packages
+---------------
+SubtitleYC also uses Python packages including PyAV, Pillow, FastAPI, Starlette,
+Uvicorn, Pydantic, python-multipart, PyCryptodomeX, pywebview, and their runtime
+dependencies. Their copyright and license files are copied from the installed
+package metadata into licenses/python during each Windows release build.
+
+The generated licenses/python/MANIFEST.txt records the exact distributions
+whose license files were found. Package metadata included inside the app is the
+authoritative version record for a particular build.
+
+Source code requests and questions
+----------------------------------
+For GPL-covered binaries redistributed with a SubtitleYC release, use the
+source links above or contact the distributor of that release for the exact
+corresponding source and build information.
+

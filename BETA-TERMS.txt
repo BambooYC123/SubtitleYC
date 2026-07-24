@@ -1,0 +1,51 @@
+﻿SubtitleYC Beta Terms
+=====================
+
+Effective date: 22 July 2026
+
+These Beta Terms supplement the SubtitleYC End User License Agreement (EULA).
+They apply only to a build identified as alpha, beta, preview, prerelease, or
+evaluation. If these terms conflict with the EULA, these terms control only for
+that prerelease build.
+
+1. Purpose
+----------
+
+The beta is provided for real-world testing, evaluation, and feedback. It may
+contain defects, change behaviour, or fail with particular videos, websites,
+drivers, GPUs, or third-party tools. Keep backups and review generated
+subtitles before relying on them.
+
+2. Licence Duration
+-------------------
+
+Unless the release page expressly states an expiry date, the licence for the
+specific beta build you obtained does not expire. The publisher may stop
+distributing, updating, or supporting that build. Access to a free beta does
+not include future versions, paid editions, hosted services, or support.
+
+3. Feedback
+-----------
+
+Feedback is voluntary. You retain ownership of your feedback and grant the
+publisher the feedback licence stated in Section 12 of the EULA. Do not submit
+confidential material, private media, credentials, or unredacted logs.
+
+4. Data and Third Parties
+-------------------------
+
+SubtitleYC processes videos and subtitles locally. Network features such as
+yt-dlp contact the website named by the user. The SubtitleYC Privacy Notice
+describes local files, logs, network requests, and user controls. Third-party
+websites and tools remain subject to their own terms and privacy practices.
+
+5. Mandatory Rights
+-------------------
+
+Nothing in these Beta Terms excludes, restricts, or modifies rights or remedies
+that cannot lawfully be excluded, including applicable rights under the
+Australian Consumer Law.
+
+The EULA, Privacy Notice, publisher identity, and support channel are included
+with or linked from the official release.
+

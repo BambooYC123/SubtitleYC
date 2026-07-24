@@ -1,0 +1,58 @@
+﻿name: Bug report
+description: Report a reproducible SubtitleYC problem
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing SubtitleYC. Do not include private media, credentials, cookies, tokens, or unredacted logs.
+  - type: input
+    id: version
+    attributes:
+      label: SubtitleYC version and edition
+      placeholder: v0.2.0-beta.1, CPU or GPU CUDA 12.9
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows and hardware
+      placeholder: Windows 11 24H2, RTX 4060, 16 GB RAM
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Use the smallest non-sensitive example possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted log excerpt
+      description: Review it carefully before posting. Attach no private media or secrets.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmation
+      options:
+        - label: I checked for an existing report.
+          required: true
+        - label: I removed private information and secrets from this report.
+          required: true
+
