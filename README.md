@@ -1,4 +1,4 @@
-﻿# SubtitleYC
+# SubtitleYC
 
 SubtitleYC is a local Windows app for extracting, reviewing, and editing
 frame-timed subtitles from burned-in video captions. It combines a native PyAV
@@ -31,6 +31,26 @@ running an unsigned beta installer.
 - Imports, edits, previews, and exports frame-timed subtitles.
 - Stores projects, settings, logs, and generated files locally.
 
+## How It Works
+
+### Open Or Resume
+
+Download a video, open one from your PC, or continue from **Previous Projects**. The main workspace keeps video controls, OCR settings, and activity progress in one place.
+
+![SubtitleYC main workspace showing recent projects](docs/screenshots/01-project-library.png)
+
+### Extract Burned-In Subtitles
+
+Draw the crop box around the captions, select the recognition language and subtitle format, then run VideOCR. SubtitleYC reports progress while you can continue checking the video frame by frame.
+
+![SubtitleYC running OCR on the selected subtitle region](docs/screenshots/02-ocr-workflow.png)
+
+### Review And Export
+
+SubtitleYC Editor displays timed cues beside the video. Correct text, adjust individual start and end times, add or delete cues, save the result, and download the finished `.srt` file.
+
+![SubtitleYC Editor reviewing and correcting subtitle cues](docs/screenshots/03-subtitle-editor.png)
+
 ## Requirements
 
 - 64-bit Windows 10 or Windows 11.
@@ -59,4 +79,3 @@ Bundled components remain under their own licences; see
 
 Publisher: **EricYC123**  
 Support: https://github.com/EricYC123/SubtitleYC/issues
-
