@@ -1,4 +1,4 @@
-﻿# SubtitleYC Privacy Notice
+# SubtitleYC Privacy Notice
 
 Effective date: 22 July 2026
 
@@ -11,7 +11,7 @@ access through the app.
 SubtitleYC 0.2.0 beta does not include accounts, advertising, analytics,
 telemetry, a licence server, or automatic crash-report uploads. Videos,
 subtitles, settings, and logs are processed and stored on the user's computer.
-Nothing is sent to the SubtitleYC publisher unless the user chooses to submit
+Nothing is sent to the SubtitleYC maintainers unless the user chooses to submit
 it in a support or feedback report.
 
 ## Data Stored Locally
@@ -65,6 +65,5 @@ elsewhere.
 ## Changes and Contact
 
 Material changes to this notice will be identified in a future release. The
-official release page identifies the publisher and current privacy/support
+official repository identifies the maintainers and current privacy/support
 contact channel.
-

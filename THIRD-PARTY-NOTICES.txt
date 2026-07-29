@@ -1,6 +1,7 @@
-﻿SubtitleYC Third-Party Notices
+SubtitleYC Third-Party Notices
 ==============================
 
+SubtitleYC itself is open-source software under the MIT License in `LICENSE`.
 SubtitleYC uses and, in bundled Windows releases, redistributes third-party
 software. Each component remains the property of its respective copyright
 holders and is provided under its own license. No endorsement is implied.
@@ -74,4 +75,3 @@ Source code requests and questions
 For GPL-covered binaries redistributed with a SubtitleYC release, use the
 source links above or contact the distributor of that release for the exact
 corresponding source and build information.
-
