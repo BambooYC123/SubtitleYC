@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SubtitleYC Editor</title>
+    <link rel="icon" type="image/png" href="/assets/SubtitleYC.png?v=20260705-02" />
+    <link rel="stylesheet" href="/assets/editor.css?v=20260721-02" />
+  </head>
+  <body>
+    <main class="editor-shell">
+      <header class="editor-topbar">
+        <div class="brand-block">
+          <img class="brand-mark" src="/assets/SubtitleYC.png?v=20260705-02" alt="" aria-hidden="true" />
+          <div>
+            <h1>SubtitleYC Editor</h1>
+            <p id="editorStatus">Loading</p>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="top-action-group" aria-label="Open project files">
+            <input id="videoInput" type="file" accept="video/*" hidden />
+            <button id="videoUploadButton" type="button">Open Video</button>
+            <button id="uploadButton" type="button" disabled>Upload Subtitles</button>
+            <button id="previousButton" type="button">Previous Projects</button>
+            <label class="editor-copy-row"><input id="videoKeepCopyInput" type="checkbox" /> Keep copy</label>
+          </div>
+          <div class="top-action-group top-action-group-project" aria-label="Subtitle project actions">
+            <button id="reloadButton" type="button">Reload</button>
+            <button id="saveButton" type="button" disabled>Save</button>
+            <button id="downloadButton" type="button" disabled>Download .srt</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="editor-grid">
+        <section class="video-pane" aria-label="Video preview">
+          <div class="video-meta-row">
+            <strong id="videoTitle">No video loaded</strong>
+            <span id="timeIndicator">Frame: 0 / 0 | Time: 00:00 / 00:00</span>
+          </div>
+          <div class="video-frame">
+            <video id="editorVideo" preload="metadata" playsinline></video>
+            <img id="editorFrameFallback" class="frame-fallback" alt="" hidden />
+            <div id="subtitleOverlay" class="subtitle-overlay" hidden></div>
+          </div>
+          <div class="transport-bar">
+            <button id="playButton" type="button" disabled>Play</button>
+            <button id="prevFrameButton" type="button" disabled>Prev Frame</button>
+            <input id="seekSlider" type="range" min="0" max="0" step="0.001" value="0" disabled />
+            <button id="nextFrameButton" type="button" disabled>Next Frame</button>
+          </div>
+          <div class="subtitle-tools-row">
+            <button id="prevSubtitleButton" type="button" disabled>Prev Subtitle</button>
+            <button id="nextSubtitleButton" type="button" disabled>Next Subtitle</button>
+            <span class="tool-spacer"></span>
+            <label class="frame-step-field">
+              Frames
+              <input id="frameStepInput" type="number" min="0.25" max="60" step="0.25" value="1" />
+            </label>
+            <button id="visibleStartBackButton" type="button" disabled>Start -</button>
+            <button id="visibleStartForwardButton" type="button" disabled>Start +</button>
+            <button id="visibleEndBackButton" type="button" disabled>End -</button>
+            <button id="visibleEndForwardButton" type="button" disabled>End +</button>
+            <button id="undoButton" type="button" disabled>Undo</button>
+            <button id="redoButton" type="button" disabled>Redo</button>
+          </div>
+        </section>
+
+        <aside class="cue-pane" aria-label="Subtitle cues">
+          <div class="cue-pane-header">
+            <div>
+              <strong id="cueCount">0 cues</strong>
+              <span id="cueMeta">SRT</span>
+            </div>
+            <div class="cue-actions">
+              <input id="subtitleImportInput" type="file" accept=".srt" hidden />
+              <button id="addCueButton" type="button">Add</button>
+              <button id="deleteCueButton" type="button" disabled>Delete</button>
+            </div>
+          </div>
+
+          <div id="cueList" class="cue-list" role="listbox" aria-label="Subtitle cue list"></div>
+
+          <form id="cueForm" class="cue-form">
+            <div class="time-fields">
+              <label>
+                Start
+                <input id="startInput" type="number" min="0" step="0.001" />
+              </label>
+              <label>
+                End
+                <input id="endInput" type="number" min="0" step="0.001" />
+              </label>
+            </div>
+            <textarea id="textInput" rows="5" placeholder="Subtitle text"></textarea>
+            <div class="edit-actions">
+              <button id="applyCueButton" type="submit" disabled>Save Changes</button>
+            </div>
+          </form>
+        </aside>
+      </section>
+    </main>
+    <div id="libraryOverlay" class="editor-overlay" hidden></div>
+    <aside id="libraryDrawer" class="editor-library-drawer" aria-hidden="true" aria-label="Previous Projects" hidden>
+      <div class="editor-drawer-header">
+        <div>
+          <h2>Previous Projects</h2>
+          <p>Open a copied video, or attach timed subtitles to the current video</p>
+        </div>
+        <button id="libraryCloseButton" type="button">Close</button>
+      </div>
+      <div class="editor-drawer-toolbar">
+        <span id="libraryMeta">0 previous project files</span>
+        <button id="libraryRefreshButton" type="button">Refresh</button>
+      </div>
+      <section class="editor-library-section" aria-labelledby="libraryVideosHeading">
+        <h3 id="libraryVideosHeading">Previous Videos</h3>
+        <div id="libraryVideoList" class="editor-library-list"></div>
+      </section>
+      <section class="editor-library-section" aria-labelledby="librarySubtitlesHeading">
+        <h3 id="librarySubtitlesHeading">Previous Subtitles</h3>
+        <div id="librarySubtitleList" class="editor-library-list"></div>
+      </section>
+    </aside>
+    <script src="/assets/editor.js?v=20260718-01"></script>
+  </body>
+</html>

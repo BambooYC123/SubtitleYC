@@ -1,81 +1,353 @@
 # SubtitleYC
 
-SubtitleYC is a local Windows app for extracting, reviewing, and editing
-frame-timed subtitles from burned-in video captions. It combines a native PyAV
-preview, VideOCR, yt-dlp, and FFmpeg in one desktop workflow.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Public beta:** This release is intended for testing and may contain defects.
-> Keep backups and review generated subtitles before relying on them.
+SubtitleYC is open-source software released under the MIT License.
+SubtitleYC is a local Windows desktop app for creating subtitle files from burned-in video captions. It can download a video URL with `yt-dlp` or open a local video, preview and scrub the video, let you draw the subtitle crop area, run the real VideOCR CLI, and export the result as `.srt`, `.txt`, or `.ass`.
+
+> **Public beta:** Keep backups and review generated subtitles before relying on them.
 
 ## Download
 
-Download the latest beta from [GitHub Releases](https://github.com/EricYC123/SubtitleYC/releases/tag/v0.2.0-beta.1).
-Do not download SubtitleYC from third-party mirrors.
+Download Windows builds from [GitHub Releases](https://github.com/EricYC123/SubtitleYC/releases). The CPU edition works without an Nvidia GPU; the CUDA edition provides faster OCR on supported Nvidia systems.
 
-- **CPU installer:** Recommended for most users and works without an Nvidia GPU.
-- **GPU CUDA 12.9 installer:** Faster OCR for supported Nvidia GTX 16 through RTX 50 systems, but substantially larger.
+The existing `v0.2.0-beta.1` installers were created before the MIT transition and may still display the legacy licence. They will be replaced by refreshed open-source builds. The source on the `main` branch is licensed under MIT now.
 
-CUDA 11.8 is not included in this beta. Nvidia GTX 10 users should install the
-CPU edition.
+The app opens as a normal desktop window. Internally it runs a private local FastAPI backend bound to `127.0.0.1`, so normal users do not need to manage a server or browser tab.
 
-These beta installers are not Authenticode-signed. Windows may show an unknown-publisher warning; verify the SHA-256 checksum before running them.
+## How SubtitleYC Works
 
-Each installer has a matching `.sha256` file. Verify the checksum before
-running an unsigned beta installer.
+### 1. Open A Video Or Resume A Project
 
-## What It Does
-
-- Opens local videos or downloads user-authorised video URLs with yt-dlp.
-- Provides smooth native frame scrubbing and a draggable subtitle crop region.
-- Runs CPU or Nvidia GPU VideOCR for burned-in captions.
-- Imports, edits, previews, and exports frame-timed subtitles.
-- Stores projects, settings, logs, and generated files locally.
-
-## How It Works
-
-### Open Or Resume
-
-Download a video, open one from your PC, or continue from **Previous Projects**. The main workspace keeps video controls, OCR settings, and activity progress in one place.
+Download a video URL, open a local video, or resume one of your recent projects. SubtitleYC keeps the source controls, OCR settings, preview, and activity status together in the main workspace.
 
 ![SubtitleYC main workspace showing recent projects](docs/screenshots/01-project-library.png)
 
-### Extract Burned-In Subtitles
+### 2. Define The Subtitle Region And Run OCR
 
-Draw the crop box around the captions, select the recognition language and subtitle format, then run VideOCR. SubtitleYC reports progress while you can continue checking the video frame by frame.
+Drag the crop box over the burned-in captions, choose the recognition language and output format, then run VideOCR. The activity panel shows extraction progress while the native preview remains available for frame checks.
 
-![SubtitleYC running OCR on the selected subtitle region](docs/screenshots/02-ocr-workflow.png)
+![SubtitleYC extracting subtitles from the selected video region](docs/screenshots/02-ocr-workflow.png)
 
-### Review And Export
+### 3. Review, Correct, And Export
 
-SubtitleYC Editor displays timed cues beside the video. Correct text, adjust individual start and end times, add or delete cues, save the result, and download the finished `.srt` file.
+Open SubtitleYC Editor to inspect every cue alongside the video. You can adjust cue text and timing, step through individual frames, add or remove cues, save your changes, and export the finished subtitle file.
 
-![SubtitleYC Editor reviewing and correcting subtitle cues](docs/screenshots/03-subtitle-editor.png)
+![SubtitleYC Editor reviewing subtitle cues against the video](docs/screenshots/03-subtitle-editor.png)
 
-## Requirements
+## Quick Start
 
-- 64-bit Windows 10 or Windows 11.
-- Several gigabytes of free disk space for installation and working video files.
-- A compatible Nvidia GPU and driver only for the GPU edition.
+1. Download a Windows release zip or installer.
+2. Launch `SubtitleYC.exe`.
+3. Load a video from a URL or choose a local video file.
+4. For a URL, let SubtitleYC auto-check available formats, optionally choose a specific format, and choose a download folder.
+5. Scrub the preview and draw the crop box around the burned-in subtitle area.
+6. Choose OCR language, subtitle output format, and timing/image settings.
+7. Run VideOCR.
+8. Review or edit subtitles, then download the generated subtitle file.
 
-## Feedback and Support
+Only download videos you have the right to download.
 
-Use [GitHub Issues](https://github.com/EricYC123/SubtitleYC/issues) for reproducible bugs and feature
-requests. Use [GitHub Discussions](https://github.com/EricYC123/SubtitleYC/discussions) for general
-feedback. Do not post private videos, credentials, cookies, access tokens, or
-unredacted logs.
+The installer keeps application files under `Program Files\SubtitleYC` by default and creates Desktop and Start Menu shortcuts automatically. Its directory page can use a `Program Files` folder on another drive for the larger GPU edition. User projects, settings, logs, and generated files remain under `%LOCALAPPDATA%\SubtitleYC\workspace`, separate from the application. The portable ZIP intentionally exposes the complete application folder and is intended for users who prefer a no-install build.
 
-Security reports must follow [SECURITY.md](SECURITY.md), not a public issue.
+## Main Features
 
-## Privacy and Licensing
+- Download videos with `yt-dlp`, including automatic format checking, optional specific-format selection, custom save folder support, and optional site subtitle import.
+- Uses Bilibili-specific format fallbacks such as `30080+30280` for 1080p plus Bilibili browser-style headers when the URL is from Bilibili.
+- Select a local video file and load it immediately.
+- Extract preview frames and probe video metadata with `ffmpeg` and `ffprobe`.
+- Scrub video, step previous/next frame, and draw a reusable subtitle crop area.
+- The preview opens immediately after a video is loaded. In the desktop app, the preview panel can use an integrated Qt/PySide native PyAV surface with an in-memory frame cache for VideOCR-like frame scrubbing.
+- Run installed or bundled VideOCR CLI / PaddleOCR with advanced settings.
+- Export subtitles as SubRip `.srt`, plain `.txt`, or Advanced SubStation Alpha `.ass`.
+- Import timed subtitles from `.srt`, `.ass`, or `.ssa` into the current video session.
+- Preview, edit, add, delete, save, and download subtitle cues.
+- Nudge individual cue starts/ends by frames, shift all cues, and snap cues to the video frame grid.
+- Jump to previous/next subtitle boundaries under the video preview.
+- Separate activity rows for downloads and OCR jobs, with stop buttons for active jobs.
+- In-app logs drawer with filtering, copy, save, refresh, and clear actions.
+- In-app storage manager for clearing downloads, uploads, previews, generated subtitle files, VideOCR runtime files, and logs.
+- Settings drawer for default download folder, theme, OCR language, output format, and OCR/timing defaults.
 
-SubtitleYC processes media locally and has no telemetry in this beta. Network
-features contact websites selected by the user. Read the [Privacy Notice](PRIVACY.md).
+## Subtitle Workflow
 
-SubtitleYC's original application code is proprietary. Downloading or viewing
-this releases repository does not grant access to that private source code.
-Use of the app is governed by the [EULA](EULA.txt) and [Beta Terms](BETA-TERMS.txt).
-Bundled components remain under their own licences; see
-[Third-Party Notices](THIRD-PARTY-NOTICES.txt).
+### Generating Subtitles
 
-Publisher: **EricYC123**  
-Support: https://github.com/EricYC123/SubtitleYC/issues
+Select a video, draw the crop box, choose the subtitle output format, then click `Run VideOCR`. SubtitleYC passes the crop and settings to VideOCR CLI and converts the resulting timed cues into the selected output format.
+
+Supported output formats:
+
+- `.srt`: timed SubRip subtitles.
+- `.txt`: plain text transcript generated from the recognized cues.
+- `.ass`: Advanced SubStation Alpha subtitles.
+
+### Editing Subtitles
+
+Use `SubtitleYC Editor` to open the editor. From there you can:
+
+- Edit cue text, start time, and end time.
+- Add or delete cues.
+- Seek the video to a cue.
+- Nudge a cue start or end by a chosen frame amount.
+- Move all cues earlier or later.
+- Snap cue timing to the video frame grid.
+- Save the edited cues back to the current subtitle file.
+
+The desktop preview uses the integrated native PyAV surface when PySide6 is available, with the web canvas remaining as a fallback for browser or non-Qt mode.
+
+The preview controls below the video can also nudge the currently visible or selected cue. `Prev Subtitle` jumps to the current subtitle start, or to the previous subtitle end if no subtitle is currently visible. `Next Subtitle` jumps to the current subtitle end, or to the next subtitle start if no subtitle is currently visible.
+
+### Importing Subtitles
+
+Use `Upload Subtitles` to attach an existing timed subtitle file to the current video. When downloading from a URL, open `Video URL subtitles` to check available site captions or auto-captions; SubtitleYC converts downloaded captions to `.srt` when possible and can attach one matching subtitle track to the session or download it separately.
+
+Import supports:
+
+- `.srt`
+- `.ass`
+- `.ssa`
+
+Plain `.txt` files are export-only because they do not contain timing data.
+
+## Downloadable App
+
+Publish separate installers so users download only the OCR runtime suitable for their PC:
+
+- `SubtitleYC-0.2.0-beta.1-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.2.0-beta.1-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.2.0-beta.1-windows-gpu-cuda-11.8-setup.exe`: optional legacy GPU release for Nvidia GTX 10 series.
+- `SubtitleYC-0.2.0-beta.1-windows.zip`: small advanced-user zip without bundled VideOCR or FFmpeg.
+
+Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
+
+Zip users can extract the folder and run `SubtitleYC.exe`. Publish every installer or zip together with its matching `.sha256` file. Before publishing, confirm that the exact VideOCR and FFmpeg builds permit redistribution and include their required notices.
+## Required External Apps
+
+If you use the bundled zip or installer, SubtitleYC first looks for tools inside the app folder:
+
+```text
+SubtitleYC\tools\videocr-cli-*\videocr-cli.exe
+SubtitleYC\tools\ffmpeg\ffmpeg.exe
+SubtitleYC\tools\ffmpeg\ffprobe.exe
+```
+
+If bundled tools are not present, SubtitleYC searches installed VideOCR CPU and GPU folders automatically, including versioned CLI directories under `C:\Program Files\VideOCR`.
+
+If VideOCR is installed elsewhere, set `VIDEOCR_CLI` before launching SubtitleYC:
+
+```powershell
+$env:VIDEOCR_CLI = "C:\Path\To\videocr-cli.exe"
+```
+
+SubtitleYC also needs `ffmpeg` and `ffprobe` available either in the bundled `tools\ffmpeg` folder or on `PATH`.
+
+## Useful Environment Variables
+
+```powershell
+$env:VIDEOCR_CLI = "C:\Path\To\videocr-cli.exe"
+$env:SUBTITLEYC_DATA_DIR = "D:\SubtitleYCWorkspace"
+$env:SUBTITLEYC_PORT = "8000"
+$env:SUBTITLEYC_MAX_JOBS = "2"
+$env:SUBTITLEYC_YTDLP_FRAGMENTS = "2"
+$env:SUBTITLEYC_MAX_VIDEO_UPLOAD_MB = "20480"
+$env:SUBTITLEYC_MIN_FREE_DISK_MB = "1024"
+$env:SUBTITLEYC_NO_BROWSER = "1"
+$env:SUBTITLEYC_USE_BROWSER = "1"
+```
+
+Notes:
+
+- `SUBTITLEYC_DATA_DIR` moves the app workspace folder. If unset, packaged Windows builds use `%LOCALAPPDATA%\SubtitleYC\workspace`; development runs use `workspace\` in the checkout.
+- `SUBTITLEYC_MAX_JOBS` is clamped from `1` to `2`.
+- `SUBTITLEYC_YTDLP_FRAGMENTS` is clamped from `1` to `4`.
+- `SUBTITLEYC_MAX_VIDEO_UPLOAD_MB` limits copied and browser-uploaded video files. The default is 20 GB.
+- `SUBTITLEYC_MIN_FREE_DISK_MB` reserves free workspace/destination space during copies and downloads. The default is 1 GB.
+- `SUBTITLEYC_NO_BROWSER` and `SUBTITLEYC_USE_BROWSER` are launcher diagnostics/fallback options.
+
+## Settings
+
+Settings autosave after you change them and are loaded again the next time SubtitleYC starts. The `Save Settings` button is still available when you want an explicit save before closing the drawer.
+
+The Settings drawer can save defaults for:
+
+- Download folder.
+- OCR language and subtitle output format.
+- Confidence, text similarity, SSIM, frames to skip, merge gap, minimum duration, and timing offset.
+- Snap-to-frame behavior.
+- Brightness threshold and max OCR image width.
+- Server model, GPU acceleration, full-frame OCR, angle classification, post-processing, and Traditional Chinese normalization.
+
+The first-run OCR language is English + Chinese Simplified. Chinese and mixed Chinese/English options map to VideOCR's `ch` PaddleOCR model; English-only maps to `en`. GPU acceleration requires a compatible GPU and the VideOCR GPU build. When both CPU and GPU builds are installed, SubtitleYC prefers the matching executable for the selected mode.
+
+## Keyboard Shortcuts
+
+Main preview:
+
+- `Space`: play or pause.
+- `Left` / `Right`: previous or next frame.
+- `Shift+Left` / `Shift+Right`: previous or next subtitle boundary.
+- `Ctrl+O`: upload a video.
+- `Ctrl+U`: upload subtitles for the current video.
+- `Ctrl+E`: open the subtitle editor.
+
+Subtitle editor:
+
+- `Space`: play or pause.
+- `Left` / `Right`: previous or next frame.
+- `Shift+Left` / `Shift+Right`: previous or next subtitle boundary.
+- `Ctrl+S`: save subtitle edits.
+- `Ctrl+Z` / `Ctrl+Y`: undo or redo subtitle edits.
+- `Ctrl+U`: upload subtitles.
+- `Ctrl+R`: reload subtitles.
+- `Delete`: delete the selected cue.
+## Logs And Storage
+
+Generated data lives under `%LOCALAPPDATA%\SubtitleYC\workspace` in packaged Windows builds, under `workspace\` in a development checkout, or under `SUBTITLEYC_DATA_DIR` if that variable is set.
+
+Common folders:
+
+```text
+workspace\downloads
+workspace\uploads
+workspace\previews
+workspace\results
+workspace\logs
+workspace\videocr-runtime
+workspace\settings.json
+```
+
+Use `Logs` to inspect app, download, OCR, and error messages. Use `Storage` to review and clear cleanable generated files. Tessdata is intentionally not clearable from the storage manager.
+
+## Build Windows Releases
+
+Build the small advanced-user zip without external tools:
+
+```powershell
+.\scripts\build-windows.ps1
+```
+
+For one self-contained edition, provide the matching installed or staged VideOCR CLI:
+
+```powershell
+.\scripts\build-installer.ps1 `
+  -BundleExternalTools `
+  -VideOCRVariant CPU `
+  -VideOCRCliPath "C:\Program Files\VideOCR\videocr-cli-CPU-v1.5.1\videocr-cli.exe"
+```
+
+Valid variants are `CPU`, `GPU-CUDA-11.8`, and `GPU-CUDA-12.9`. GPU paths must match the requested CUDA edition, which prevents accidentally publishing a mislabeled installer.
+
+For the recommended public matrix, stage the CPU and CUDA 12.9 packages and optionally CUDA 11.8, then run:
+
+```powershell
+.\scripts\build-public-releases.ps1 `
+  -CpuVideOCRCliPath "C:\VideOCR-Staging\videocr-cli-CPU-v1.5.1\videocr-cli.exe" `
+  -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
+  -GpuCuda118VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-11.8\videocr-cli.exe" `
+  -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
+  -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.2.0"
+```
+
+The matrix requires the same versioned VideOCR package for every edition, compiles SubtitleYC once, then replaces the bundled OCR runtime for each edition. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces edition-specific setup executables, SHA-256 checksum files, and one public-build manifest tying every installer to the same source run. CUDA 11.8 is optional; omit that argument if you are publishing only the default CPU and modern GPU editions. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.
+
+Release builds install only hashes pinned in `requirements-release.txt`, run `pip check` and `pip-audit`, collect third-party license files, and verify output checksums.
+
+For a public release, use a trusted Windows code-signing certificate and require signing:
+
+```powershell
+$env:SUBTITLEYC_SIGNING_CERT_THUMBPRINT = "YOUR_CERTIFICATE_THUMBPRINT"
+.\scripts\build-public-releases.ps1 `
+  -CpuVideOCRCliPath "C:\VideOCR-Staging\videocr-cli-CPU-v1.5.1\videocr-cli.exe" `
+  -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
+  -RequireSigning
+```
+
+The build locates `signtool.exe` from the Windows SDK, applies and verifies SHA-256 timestamped signatures, and refuses unsigned output when `-RequireSigning` is supplied.
+
+## Stage a Public Beta
+
+The public GitHub repository should contain the complete SubtitleYC source,
+MIT License, contribution guide, issue templates, and release documentation.
+After one complete public matrix build, stage a clean source repository and its
+verified release assets with:
+
+```powershell
+.\scripts\stage-public-beta.ps1 `
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.2.0" `
+  -Destination "D:\SubtitleYCBuild\SubtitleYC-v0.2.0-beta.1-stage" `
+  -MaintainerName "EricYC123" `
+  -SupportUrl "https://github.com/EricYC123/SubtitleYC/security" `
+  -RepositoryUrl "https://github.com/EricYC123/SubtitleYC" `
+  -AllowUnsigned
+```
+
+Omit `-AllowUnsigned` once installers are Authenticode-signed. The staging
+script refuses mixed-run artifacts, failed checksums, files at or above
+GitHub's 2 GiB per-asset limit, missing CPU/GPU editions, and unsigned files
+unless the beta warning is explicitly enabled. It creates `repository` for the
+open-source GitHub repository and `release-assets` for the prerelease upload.
+
+Read `distribution/RELEASE-CHECKLIST.md` and
+`distribution/BETA-PROGRAM.md` before publication. Confirm the support and
+private security-reporting channels before uploading a release.
+## Security
+
+SubtitleYC's API listens only on a random loopback port. The desktop launcher creates a private token for each run; API requests require that session, and foreign Host, Origin, and embedded browser navigation requests are rejected. The Qt bridge exposes only an explicit method allowlist.
+
+Remote downloads accept only HTTP(S) URLs without embedded credentials. Video copies/uploads have configurable size limits, downloads and copies retain a free-disk reserve, subtitle uploads are capped, and partial failed uploads are removed. Treat downloaded media and subtitle files as untrusted data and keep SubtitleYC, yt-dlp, VideOCR, FFmpeg, and Windows security updates current.
+
+See `SECURITY.md` for vulnerability reporting and `PRIVACY.md` for the app's
+local storage, logging, and network behaviour.
+
+## Run From Source
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
+subtitleyc
+```
+
+Or double-click:
+
+```text
+Start-SubtitleYC.bat
+```
+
+## Test
+
+```powershell
+python -m unittest discover -s tests
+python -m compileall subtitleyc tests
+```
+
+`node --check static\app.js` can be used for JavaScript syntax checking if Node.js is installed.
+
+## Notes
+
+- Subtitle timing depends on source video FPS, crop quality, and OCR settings. Use timing offset, snap-to-frame, subtitle boundary jumps, and the subtitle editor for fine adjustments.
+- Some sites may require newer yt-dlp extractor support or account-only access. SubtitleYC cannot bypass access restrictions.
+- Active downloads and OCR jobs can be stopped from their activity rows.
+## Contributing
+
+Issues and pull requests are welcome. See `CONTRIBUTING.md` for environment,
+testing, contribution, and security-reporting guidance.
+
+## Licensing
+
+SubtitleYC is open-source software licensed under the MIT License. You may use,
+copy, modify, distribute, sublicense, and sell copies subject to the copyright
+and permission notice in `LICENSE`.
+
+SubtitleYC uses third-party software under separate licenses, including VideOCR
+(MIT), yt-dlp (The Unlicense), Qt/PySide6 (LGPLv3), and the FFmpeg build bundled
+with Windows releases (currently GPLv3-or-later). See
+`THIRD-PARTY-NOTICES.txt` and the `licenses` directory for full notices, license
+texts, source links, and build information.
+
+Windows release builds also collect license files from the exact installed
+Python distributions into `licenses/python`, so the notice bundle matches the
+dependencies packaged in that release. They also generate exact FFmpeg hashes,
+version output, and build configuration in
+`licenses/FFmpeg-build/BUILD-INFO.txt`.

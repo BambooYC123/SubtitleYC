@@ -1,0 +1,23 @@
+SubtitleYC installs as a local Windows desktop app for video subtitle extraction and editing.
+
+What will be installed:
+- SubtitleYC.exe and the desktop interface files.
+- If this is the bundled installer, the tools folder also contains VideOCR and FFmpeg/ffprobe.
+- Start Menu and desktop shortcuts. These are the normal places to launch SubtitleYC.
+
+Where data is stored:
+- Application files are installed to %ProgramFiles%\SubtitleYC by default.
+- The next page can place the application under Program Files on another drive when more space is needed.
+- Choose an application folder here, not Downloads or Desktop; shortcuts are created there automatically.
+- Generated videos, previews, logs, settings, and subtitle results are stored in %LOCALAPPDATA%\SubtitleYC\workspace unless you set SUBTITLEYC_DATA_DIR.
+
+Useful controls:
+- Paste a URL and SubtitleYC will check available yt-dlp formats automatically.
+- Space plays or pauses preview, Left/Right steps frames, and Shift+Left/Right jumps subtitle boundaries.
+- Ctrl+S saves subtitle edits in the editor, Ctrl+U uploads subtitles, and Ctrl+E opens the subtitle editor from the main window.
+
+Notes:
+- The bundled installer is much larger because it includes the real VideOCR runtime.
+- Only download videos you have the right to download.
+- SubtitleYC is open-source software under the MIT License.
+- The MIT License, privacy and security notices, and third-party license texts are installed beside the app.

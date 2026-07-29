@@ -1,4 +1,4 @@
-﻿# SubtitleYC Security Policy
+# SubtitleYC Security Policy
 
 ## Supported Versions
 
@@ -24,7 +24,7 @@ disclosing a confirmed vulnerability.
 
 Download SubtitleYC only from its official release page. Every release asset
 is published with a SHA-256 checksum. Public beta installers may be unsigned;
-the release notes must clearly identify signing status. A paid production
+the release notes must clearly identify signing status. A production
 release should be Authenticode-signed and timestamped.
 
 ## Security Boundaries
@@ -37,4 +37,3 @@ and applies restricted Qt WebEngine navigation and permission policies.
 These controls reduce risk but do not make untrusted media, websites, or files
 safe. Keep Windows, GPU drivers, SubtitleYC, yt-dlp, and antivirus protection
 up to date, and do not use the app to bypass access controls.
-
