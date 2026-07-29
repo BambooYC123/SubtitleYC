@@ -1,10 +1,13 @@
-# SubtitleYC v0.2.0 Beta 1
+# SubtitleYC v0.2.0 Beta 2
 
-This is the first public testing release of SubtitleYC for 64-bit Windows.
+SubtitleYC is a free and open-source Windows app for extracting, reviewing,
+and editing frame-timed subtitles from video.
 
-## Open-Source Transition
+## MIT Release
 
-SubtitleYC source is now available under the MIT License. The original Beta 1 installers were built before this transition and may still display the legacy licence; refreshed installers will replace them in a subsequent release.
+Beta 2 is the first release whose installers, bundled application files, and
+installer licence page consistently use the MIT License. Bundled third-party
+tools retain their own licences, which are included with the installation.
 
 ## Highlights
 
@@ -36,13 +39,14 @@ the user's workspace under `%LOCALAPPDATA%\SubtitleYC\workspace`.
 
 ## Verify the Download
 
-Every installer is accompanied by a `.sha256` file. In PowerShell:
+GitHub displays a SHA-256 digest beside each installer asset. To calculate the
+digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.2.0-beta.1-windows-cpu-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.2.0-beta.2-windows-cpu-setup.exe -Algorithm SHA256
 ```
 
-Compare the result with the corresponding checksum file before installation.
+Compare the result with the digest shown on the release page before installation.
 
 Please report reproducible problems through the issue forms. Do not attach
 private media or unredacted logs.

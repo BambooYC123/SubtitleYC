@@ -24,7 +24,7 @@
 
 - [ ] Publish the source repository under the MIT License.
 - [ ] Enable GitHub Issues, Discussions, and Private Vulnerability Reporting.
-- [ ] Publish `v0.2.0-beta.1` as a prerelease from the exact tested commit.
+- [ ] Publish `v0.2.0-beta.2` as a prerelease from the exact tested commit.
 - [ ] Upload the CPU installer, CUDA 12.9 installer, and every matching `.sha256` file.
 - [ ] Make CPU the recommended default and explain the GPU hardware requirement.
 - [ ] Keep each GitHub release asset below 2 GiB.

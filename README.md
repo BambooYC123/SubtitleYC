@@ -11,7 +11,7 @@ SubtitleYC is a local Windows desktop app for creating subtitle files from burne
 
 Download Windows builds from [GitHub Releases](https://github.com/EricYC123/SubtitleYC/releases). The CPU edition works without an Nvidia GPU; the CUDA edition provides faster OCR on supported Nvidia systems.
 
-The existing `v0.2.0-beta.1` installers were created before the MIT transition and may still display the legacy licence. They will be replaced by refreshed open-source builds. The source on the `main` branch is licensed under MIT now.
+The Beta 2 installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
 
 The app opens as a normal desktop window. Internally it runs a private local FastAPI backend bound to `127.0.0.1`, so normal users do not need to manage a server or browser tab.
 
@@ -37,7 +37,7 @@ Open SubtitleYC Editor to inspect every cue alongside the video. You can adjust 
 
 ## Quick Start
 
-1. Download a Windows release zip or installer.
+1. Download the CPU or GPU Windows installer.
 2. Launch `SubtitleYC.exe`.
 3. Load a video from a URL or choose a local video file.
 4. For a URL, let SubtitleYC auto-check available formats, optionally choose a specific format, and choose a download folder.
@@ -48,7 +48,7 @@ Open SubtitleYC Editor to inspect every cue alongside the video. You can adjust 
 
 Only download videos you have the right to download.
 
-The installer keeps application files under `Program Files\SubtitleYC` by default and creates Desktop and Start Menu shortcuts automatically. Its directory page can use a `Program Files` folder on another drive for the larger GPU edition. User projects, settings, logs, and generated files remain under `%LOCALAPPDATA%\SubtitleYC\workspace`, separate from the application. The portable ZIP intentionally exposes the complete application folder and is intended for users who prefer a no-install build.
+The installer keeps application files under `Program Files\SubtitleYC` by default and creates Desktop and Start Menu shortcuts automatically. Its directory page can use a `Program Files` folder on another drive for the larger GPU edition. User projects, settings, logs, and generated files remain under `%LOCALAPPDATA%\SubtitleYC\workspace`, separate from the application.
 
 ## Main Features
 
@@ -111,16 +111,15 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 ## Downloadable App
 
-Publish separate installers so users download only the OCR runtime suitable for their PC:
+Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.2.0-beta.1-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.2.0-beta.1-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
-- `SubtitleYC-0.2.0-beta.1-windows-gpu-cuda-11.8-setup.exe`: optional legacy GPU release for Nvidia GTX 10 series.
-- `SubtitleYC-0.2.0-beta.1-windows.zip`: small advanced-user zip without bundled VideOCR or FFmpeg.
+- `SubtitleYC-0.2.0-beta.2-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.2.0-beta.2-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
-Zip users can extract the folder and run `SubtitleYC.exe`. Publish every installer or zip together with its matching `.sha256` file. Before publishing, confirm that the exact VideOCR and FFmpeg builds permit redistribution and include their required notices.
+The release page also includes source archives generated automatically by GitHub. Those archives are intended for developers and are not substitutes for the Windows installers.
+
 ## Required External Apps
 
 If you use the bundled zip or installer, SubtitleYC first looks for tools inside the app folder:

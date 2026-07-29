@@ -3,7 +3,7 @@
 #define AppVersion "0.2.0"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.2.0-beta.1"
+#define AppDisplayVersion "0.2.0-beta.2"
 #endif
 
 #ifndef AppEdition
@@ -16,7 +16,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.2.0-beta.1-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.2.0-beta.2-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"

@@ -2,7 +2,7 @@
 
 ## Recommended First Release
 
-Publish `v0.2.0-beta.1` free of charge to a small group of Windows users. Treat
+Publish `v0.2.0-beta.2` free of charge to a small group of Windows users. Treat
 it as a real release, but label it clearly as prerelease software. Publish the
 tested source commit under the MIT License alongside the installer artifacts.
 
