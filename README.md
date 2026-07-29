@@ -265,32 +265,6 @@ $env:SUBTITLEYC_SIGNING_CERT_THUMBPRINT = "YOUR_CERTIFICATE_THUMBPRINT"
 
 The build locates `signtool.exe` from the Windows SDK, applies and verifies SHA-256 timestamped signatures, and refuses unsigned output when `-RequireSigning` is supplied.
 
-## Stage a Public Beta
-
-The public GitHub repository should contain the complete SubtitleYC source,
-MIT License, contribution guide, issue templates, and release documentation.
-After one complete public matrix build, stage a clean source repository and its
-verified release assets with:
-
-```powershell
-.\scripts\stage-public-beta.ps1 `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.2.0" `
-  -Destination "D:\SubtitleYCBuild\SubtitleYC-v0.2.0-beta.1-stage" `
-  -MaintainerName "EricYC123" `
-  -SupportUrl "https://github.com/EricYC123/SubtitleYC/security" `
-  -RepositoryUrl "https://github.com/EricYC123/SubtitleYC" `
-  -AllowUnsigned
-```
-
-Omit `-AllowUnsigned` once installers are Authenticode-signed. The staging
-script refuses mixed-run artifacts, failed checksums, files at or above
-GitHub's 2 GiB per-asset limit, missing CPU/GPU editions, and unsigned files
-unless the beta warning is explicitly enabled. It creates `repository` for the
-open-source GitHub repository and `release-assets` for the prerelease upload.
-
-Read `distribution/RELEASE-CHECKLIST.md` and
-`distribution/BETA-PROGRAM.md` before publication. Confirm the support and
-private security-reporting channels before uploading a release.
 ## Security
 
 SubtitleYC's API listens only on a random loopback port. The desktop launcher creates a private token for each run; API requests require that session, and foreign Host, Origin, and embedded browser navigation requests are rejected. The Qt bridge exposes only an explicit method allowlist.
