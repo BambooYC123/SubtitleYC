@@ -1,5 +1,7 @@
 # SubtitleYC
 
+[README](README.md) | [Contributing](CONTRIBUTING.md) | [MIT License](LICENSE) | [Security](SECURITY.md) | [Privacy](PRIVACY.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 SubtitleYC is open-source software released under the MIT License.
