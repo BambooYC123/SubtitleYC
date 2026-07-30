@@ -32,7 +32,6 @@ from subtitleyc.main import (
     sessions,
     state_lock,
 )
-from subtitleyc.ocr import normalize_text
 from subtitleyc.srt import SubtitleCue, adjust_cue_timing, cues_to_ass, cues_to_srt, cues_to_txt, format_timestamp, parse_ass, parse_srt
 from subtitleyc.videocr_cli import VideOCRCliSettings, _build_args, count_srt_cues, find_videocr_cli, map_language, seconds_to_cli_time
 
@@ -236,9 +235,6 @@ class TestSrt(unittest.TestCase):
             ass_output.unlink(missing_ok=True)
     def test_format_timestamp_rounds_to_milliseconds(self):
         self.assertEqual(format_timestamp(3661.2345), "01:01:01,234")
-
-    def test_normalize_text_removes_spaces_between_chinese_characters(self):
-        self.assertEqual(normalize_text("\u4f60 \u597d \u4e16 \u754c"), "\u4f60\u597d\u4e16\u754c")
 
     def test_videocr_language_mapping_uses_paddle_chinese_for_mixed_subtitles(self):
         self.assertEqual(map_language("eng"), "en")

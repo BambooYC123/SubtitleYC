@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -23,7 +22,7 @@ from PySide6.QtWebEngineCore import (
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QStyle, QTabBar, QTabWidget, QToolButton, QWidget
 
-from .native_editor import NativeVideoDecoder
+from .native_video import NativeVideoDecoder
 
 
 BRIDGE_SCRIPT = r"""

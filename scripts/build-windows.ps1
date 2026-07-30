@@ -4,7 +4,7 @@ param(
     [switch]$BundleExternalTools,
     [switch]$SkipAppCompile,
     [switch]$SkipPortableZip,
-    [ValidateSet("CPU", "GPU-CUDA-11.8", "GPU-CUDA-12.9")]
+    [ValidateSet("CPU", "GPU-CUDA-12.9")]
     [string]$VideOCRVariant = "CPU",
     [string]$VideOCRCliPath = $env:VIDEOCR_CLI,
     [string]$FFmpegPath = $env:FFMPEG_BINARY,
@@ -123,7 +123,6 @@ function Test-VideOCRVariantPath {
     $normalized = $Path.ToLowerInvariant()
     switch ($Variant) {
         "CPU" { return $normalized -match 'videocr' -and $normalized -match 'cpu' -and $normalized -notmatch 'gpu' }
-        "GPU-CUDA-11.8" { return $normalized -match 'videocr' -and $normalized -match 'gpu' -and $normalized -match 'cuda[-_ ]?11\.8' }
         "GPU-CUDA-12.9" { return $normalized -match 'videocr' -and $normalized -match 'gpu' -and $normalized -match 'cuda[-_ ]?12\.9' }
     }
     return $false

@@ -1,7 +1,0 @@
-services:
-  subtitleyc:
-    build: .
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./workspace:/data

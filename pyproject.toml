@@ -1,7 +1,7 @@
 [project]
 name = "subtitleyc"
 version = "0.2.0"
-description = "Local desktop app for extracting and editing frame-timed subtitles from burned-in video captions with VideOCR."
+description = "Open-source Windows app for extracting, reviewing, and editing subtitles from burned-in video captions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }

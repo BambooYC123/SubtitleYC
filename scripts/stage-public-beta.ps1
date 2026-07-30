@@ -61,6 +61,10 @@ foreach ($requiredEdition in $requiredEditions) {
     }
 }
 
+if ($manifestNames.Count -ne $requiredEditions.Count) {
+    throw "The public build manifest must contain exactly the CPU and CUDA 12.9 installers."
+}
+
 $destinationPath = [IO.Path]::GetFullPath($Destination)
 if (Test-Path -LiteralPath $destinationPath) {
     if (@(Get-ChildItem -LiteralPath $destinationPath -Force).Count -gt 0) {
@@ -74,7 +78,7 @@ $releaseAssetsDir = Join-Path $destinationPath "release-assets"
 New-Item -ItemType Directory -Path $repositoryDir, $releaseAssetsDir -Force | Out-Null
 $sourceInputs = @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "docs", "distribution", "licenses",
-    ".gitignore", "CONTRIBUTING.md", "MAINTAINERS.md", "Dockerfile", "docker-compose.yml", "LICENSE", "PRIVACY.md",
+    ".gitignore", "CONTRIBUTING.md", "MAINTAINERS.md", "LICENSE", "PRIVACY.md",
     "pyproject.toml", "README.md", "requirements-release.txt", "SECURITY.md", "Start-SubtitleYC.bat",
     "SubtitleYC.spec", "THIRD-PARTY-NOTICES.txt"
 )
@@ -89,7 +93,7 @@ Copy-Item -LiteralPath (Join-Path $TemplateDir ".github") -Destination $reposito
 Copy-Item -LiteralPath (Join-Path $TemplateDir "RELEASE-NOTES.md") -Destination $repositoryDir -Force
 
 $allSigned = $true
-$checksumLines = [Collections.Generic.List[string]]::new()
+
 foreach ($artifact in @($manifest.artifacts)) {
     $fileName = [string]$artifact.file_name
     $sourcePath = Join-Path (Split-Path -Parent $manifestPath) $fileName
@@ -114,15 +118,13 @@ foreach ($artifact in @($manifest.artifacts)) {
             throw "$fileName is not Authenticode-signed. Pass -AllowUnsigned only for a clearly disclosed public beta."
         }
     }
-    Copy-Item -LiteralPath $sourcePath, $sourceChecksumPath -Destination $releaseAssetsDir -Force
-    $checksumLines.Add("$actualHash  $fileName")
+    Copy-Item -LiteralPath $sourcePath -Destination $releaseAssetsDir -Force
 }
-Set-Content -LiteralPath (Join-Path $releaseAssetsDir "SHA256SUMS.txt") -Value $checksumLines -Encoding ASCII
 
 $signingStatus = if ($allSigned) {
     "The installers are Authenticode-signed and timestamped."
 } else {
-    "These beta installers are not Authenticode-signed. Windows may show an unknown-publisher warning; verify the SHA-256 checksum before running them."
+    "These beta installers are not Authenticode-signed. Windows may show an unknown-publisher warning; compare the SHA-256 digest shown by GitHub before running them."
 }
 $cleanRepositoryUrl = $RepositoryUrl -replace '/+$', ''
 $replacements = [ordered]@{
@@ -132,15 +134,19 @@ $replacements = [ordered]@{
     '{{SUPPORT_URL}}' = $SupportUrl
     '{{SIGNING_STATUS}}' = $signingStatus
 }
-Get-ChildItem -LiteralPath $repositoryDir -Recurse -File | ForEach-Object {
-    $content = Get-Content -LiteralPath $_.FullName -Raw
+$textExtensions = @(".bat", ".css", ".html", ".iss", ".js", ".json", ".md", ".ps1", ".py", ".spec", ".toml", ".txt", ".yaml", ".yml")
+$templateFiles = @(Get-ChildItem -LiteralPath $repositoryDir -Recurse -File | Where-Object {
+    $_.Name -eq ".gitignore" -or $_.Extension.ToLowerInvariant() -in $textExtensions
+})
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+$templateFiles | ForEach-Object {
+    $content = [IO.File]::ReadAllText($_.FullName)
     foreach ($replacement in $replacements.GetEnumerator()) {
         $content = $content.Replace($replacement.Key, $replacement.Value)
     }
-    Set-Content -LiteralPath $_.FullName -Value $content -Encoding UTF8
+    [IO.File]::WriteAllText($_.FullName, $content, $utf8NoBom)
 }
-$unresolvedTemplates = @(Get-ChildItem -LiteralPath $repositoryDir -Recurse -File |
-    Select-String -Pattern '\{\{[A-Z_]+\}\}')
+$unresolvedTemplates = @($templateFiles | Select-String -Pattern '\{\{[A-Z_]+\}\}')
 if ($unresolvedTemplates.Count -gt 0) {
     throw "Public repository staging left unresolved template values."
 }
@@ -169,7 +175,6 @@ $maintainerRecord = @(
     "- Staged release: $ReleaseTag"
 )
 Set-Content -LiteralPath (Join-Path $repositoryDir "MAINTAINERS.md") -Value $maintainerRecord -Encoding UTF8
-Copy-Item -LiteralPath $manifestPath -Destination $releaseAssetsDir -Force
 Copy-Item -LiteralPath (Join-Path $Root "distribution\RELEASE-CHECKLIST.md") -Destination $destinationPath -Force
 Copy-Item -LiteralPath (Join-Path $Root "distribution\BETA-PROGRAM.md") -Destination $destinationPath -Force
 

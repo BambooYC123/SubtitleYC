@@ -4,7 +4,7 @@ param(
     [switch]$BundleExternalTools,
     [switch]$SkipAppBuild,
     [switch]$SkipPortableZip,
-    [ValidateSet("CPU", "GPU-CUDA-11.8", "GPU-CUDA-12.9")]
+    [ValidateSet("CPU", "GPU-CUDA-12.9")]
     [string]$VideOCRVariant = "CPU",
     [string]$VideOCRCliPath = $env:VIDEOCR_CLI,
     [string]$FFmpegPath = $env:FFMPEG_BINARY,
@@ -198,7 +198,6 @@ $editionName = if (-not $BundleExternalTools) {
 } else {
     switch ($VideOCRVariant) {
         "CPU" { "CPU Edition" }
-        "GPU-CUDA-11.8" { "GPU Edition (CUDA 11.8)" }
         "GPU-CUDA-12.9" { "GPU Edition (CUDA 12.9)" }
     }
 }

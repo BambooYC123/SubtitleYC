@@ -5,7 +5,6 @@ param(
     [string]$CpuVideOCRCliPath,
     [Parameter(Mandatory = $true)]
     [string]$GpuCuda129VideOCRCliPath,
-    [string]$GpuCuda118VideOCRCliPath,
     [string]$FFmpegPath = $env:FFMPEG_BINARY,
     [string]$FFprobePath = $env:FFPROBE_BINARY,
     [string]$ArtifactsRoot,
@@ -135,18 +134,9 @@ $gpuCuda129Version = Get-VideOCRVersionFromPath -Path $GpuCuda129VideOCRCliPath
 if ($gpuCuda129Version -ne $videOCRVersion) {
     throw "CPU VideOCR v$videOCRVersion and CUDA 12.9 VideOCR v$gpuCuda129Version do not match. Stage one VideOCR version for every public edition."
 }
-if ($GpuCuda118VideOCRCliPath) {
-    $gpuCuda118Version = Get-VideOCRVersionFromPath -Path $GpuCuda118VideOCRCliPath
-    if ($gpuCuda118Version -ne $videOCRVersion) {
-        throw "CPU VideOCR v$videOCRVersion and CUDA 11.8 VideOCR v$gpuCuda118Version do not match. Stage one VideOCR version for every public edition."
-    }
-}
 Write-Host "Building SubtitleYC with VideOCR v$videOCRVersion across all editions" -ForegroundColor Cyan
 
 Build-Edition -Variant "CPU" -VideOCRCliPath $CpuVideOCRCliPath -CompileApp
-if ($GpuCuda118VideOCRCliPath) {
-    Build-Edition -Variant "GPU-CUDA-11.8" -VideOCRCliPath $GpuCuda118VideOCRCliPath
-}
 Build-Edition -Variant "GPU-CUDA-12.9" -VideOCRCliPath $GpuCuda129VideOCRCliPath
 
 $sourceFiles = @()
@@ -154,7 +144,7 @@ foreach ($sourceInput in @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "distribution",
     "pyproject.toml", "requirements-release.txt", "SubtitleYC.spec", "README.md",
     "LICENSE", "CONTRIBUTING.md", "MAINTAINERS.md", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt",
-    ".gitignore", "Dockerfile", "docker-compose.yml", "Start-SubtitleYC.bat"
+    ".gitignore", "Start-SubtitleYC.bat"
 )) {
     $sourcePath = Join-Path $Root $sourceInput
     if (Test-Path -LiteralPath $sourcePath -PathType Container) {
@@ -184,9 +174,6 @@ $expectedInstallers = @(
     "SubtitleYC-$ReleaseLabel-windows-cpu-setup.exe",
     "SubtitleYC-$ReleaseLabel-windows-gpu-cuda-12.9-setup.exe"
 )
-if ($GpuCuda118VideOCRCliPath) {
-    $expectedInstallers += "SubtitleYC-$ReleaseLabel-windows-gpu-cuda-11.8-setup.exe"
-}
 $artifactRecords = foreach ($installerName in $expectedInstallers) {
     $installerPath = Join-Path $releaseDir $installerName
     $checksumPath = "$installerPath.sha256"
@@ -218,5 +205,5 @@ $publicBuildManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manif
 Write-Host ""
 Write-Host "Public release matrix complete." -ForegroundColor Green
 Write-Host "Build manifest: $manifestPath"
-Write-Host "Publish each setup executable together with its matching .sha256 file."
-Write-Host "CPU is the default download; CUDA 12.9 is for Nvidia GTX 16 through RTX 50 series; CUDA 11.8 is optional for GTX 10 series."
+Write-Host "Publish only the CPU and CUDA 12.9 setup executables; keep checksums and the build manifest with the private release records."
+Write-Host "CPU is the default download; CUDA 12.9 is for Nvidia GTX 16 through RTX 50 series."

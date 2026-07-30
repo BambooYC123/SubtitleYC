@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import atexit
-import json
 import os
 import secrets
 import socket
-import subprocess
 import sys
 import threading
 import time
@@ -365,76 +363,6 @@ class DesktopApi:
         webbrowser.open(url, new=2)
         return {"ok": True, "url": url}
 
-    def open_native_editor(
-        self,
-        session_id: str,
-        crop: dict[str, object] | None = None,
-        time_seconds: float = 0.0,
-    ) -> dict[str, object]:
-        if not session_id:
-            return {"ok": False, "message": "Load a video before opening the smooth editor."}
-
-        result_dir = _runtime_root() / "workspace" / "native-editor-results"
-        result_dir.mkdir(parents=True, exist_ok=True)
-        result_path = result_dir / f"{session_id}-{time.time_ns()}.json"
-        crop_json = json.dumps(crop or {})
-        if getattr(sys, "frozen", False):
-            command = [
-                sys.executable,
-                "--native-editor",
-                "--base-url",
-                self.base_url,
-                "--session-id",
-                session_id,
-                "--result",
-                str(result_path),
-                "--crop-json",
-                crop_json,
-                "--time-seconds",
-                str(float(time_seconds or 0.0)),
-            ]
-        else:
-            command = [
-                sys.executable,
-                "-m",
-                "subtitleyc.native_editor",
-                "--base-url",
-                self.base_url,
-                "--session-id",
-                session_id,
-                "--result",
-                str(result_path),
-                "--crop-json",
-                crop_json,
-                "--time-seconds",
-                str(float(time_seconds or 0.0)),
-            ]
-
-        creationflags = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
-        try:
-            completed = subprocess.run(
-                command,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                check=False,
-                creationflags=creationflags,
-            )
-        except OSError as exc:
-            return {"ok": False, "message": f"Could not open smooth editor: {exc}"}
-
-        if result_path.is_file():
-            try:
-                payload = json.loads(result_path.read_text(encoding="utf-8"))
-                payload.setdefault("exit_code", completed.returncode)
-                return payload
-            except (OSError, json.JSONDecodeError) as exc:
-                return {"ok": False, "message": f"Smooth editor result could not be read: {exc}"}
-        if completed.returncode == 0:
-            return {"ok": True, "exit_code": completed.returncode}
-        return {"ok": False, "message": "Smooth editor closed before returning a result.", "exit_code": completed.returncode}
-
-
 def _wait_for_server(url: str, app_token: str, timeout_seconds: float = 15.0) -> None:
     deadline = time.monotonic() + timeout_seconds
     last_error: Exception | None = None
@@ -547,11 +475,6 @@ def run() -> None:
         from subtitleyc.ytdlp_probe import worker_main as ytdlp_probe_worker_main
 
         raise SystemExit(ytdlp_probe_worker_main(sys.argv[2:]))
-
-    if len(sys.argv) > 1 and sys.argv[1] == "--native-editor":
-        from subtitleyc.native_editor import main as native_editor_main
-
-        raise SystemExit(native_editor_main(sys.argv[2:]))
 
     if not _claim_single_instance():
         return

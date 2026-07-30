@@ -68,6 +68,20 @@ class InstallerLayoutTests(unittest.TestCase):
         self.assertIn("release_label = $ReleaseLabel", build_script)
         self.assertIn('"-SkipPortableZip"', build_script)
 
+    def test_public_release_matrix_only_contains_supported_editions(self) -> None:
+        windows_build = (ROOT / "scripts" / "build-windows.ps1").read_text(encoding="utf-8")
+        installer_build = (ROOT / "scripts" / "build-installer.ps1").read_text(encoding="utf-8")
+        public_build = (ROOT / "scripts" / "build-public-releases.ps1").read_text(encoding="utf-8")
+        public_stage = (ROOT / "scripts" / "stage-public-beta.ps1").read_text(encoding="utf-8")
+
+        self.assertIn('ValidateSet("CPU", "GPU-CUDA-12.9")', windows_build)
+        self.assertIn('ValidateSet("CPU", "GPU-CUDA-12.9")', installer_build)
+        self.assertIn("windows-cpu-setup.exe", public_build)
+        self.assertIn("windows-gpu-cuda-12.9-setup.exe", public_build)
+        self.assertIn("exactly the CPU and CUDA 12.9 installers", public_stage)
+        self.assertNotIn("$sourcePath, $sourceChecksumPath", public_stage)
+        self.assertNotIn("$manifestPath -Destination $releaseAssetsDir", public_stage)
+
 
 if __name__ == "__main__":
     unittest.main()

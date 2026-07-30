@@ -29,7 +29,6 @@ from pydantic import BaseModel, Field
 
 from . import __release__, __version__
 from .logs import clear_log_entries, configure_logging, get_log_entries, install_crash_logging, log_event, record_crash
-from .process import run_hidden_subprocess
 from .security import validate_public_http_url
 from .srt import SubtitleCue, adjust_cue_timing, cues_to_ass, cues_to_srt, cues_to_txt, parse_ass, parse_srt
 from .videocr_cli import (
@@ -40,7 +39,7 @@ from .videocr_cli import (
     map_language,
     run_videocr_cli,
 )
-from .video import VIDEO_EXTENSIONS, StreamingFrameDecoder, VideoToolError, newest_video_file, probe_video
+from .video import VIDEO_EXTENSIONS, StreamingFrameDecoder, VideoToolError, probe_video
 from .ytdlp_download import YtDlpDownloadCancelled, download_in_subprocess
 from .ytdlp_probe import probe_in_subprocess
 
@@ -101,7 +100,6 @@ UPLOAD_DIR = DATA_DIR / "uploads"
 DOWNLOAD_DIR = DATA_DIR / "downloads"
 PREVIEW_DIR = DATA_DIR / "previews"
 RESULTS_DIR = DATA_DIR / "results"
-TESSDATA_DIR = DATA_DIR / "tessdata"
 VIDEOCR_RUNTIME_DIR = DATA_DIR / "videocr-runtime"
 LOG_DIR = DATA_DIR / "logs"
 SETTINGS_PATH = DATA_DIR / "settings.json"
@@ -111,7 +109,6 @@ for directory in (
     DOWNLOAD_DIR,
     PREVIEW_DIR,
     RESULTS_DIR,
-    TESSDATA_DIR,
     VIDEOCR_RUNTIME_DIR,
     LOG_DIR,
 ):
@@ -620,13 +617,6 @@ def _storage_category_specs() -> dict[str, dict[str, Any]]:
             "path": LOG_DIR,
             "cleanable": True,
         },
-        "tessdata": {
-            "label": "Tessdata OCR language files",
-            "description": "Required OCR language data kept for future runs.",
-            "path": TESSDATA_DIR,
-            "cleanable": False,
-            "visible": False,
-        },
     }
 
 
@@ -1109,113 +1099,6 @@ def _library_display_name(path: Path) -> str:
     if " " not in stem and "_" in stem:
         stem = stem.replace("_", " ")
     return _safe_filename(stem, suffix or path.suffix)
-
-def _find_tesseract() -> str | None:
-    candidates = [
-        os.environ.get("TESSERACT_CMD"),
-        shutil.which("tesseract"),
-        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-    ]
-    for candidate in candidates:
-        if candidate and Path(candidate).exists():
-            return str(Path(candidate))
-    return None
-
-
-def _language_parts(language: str) -> list[str]:
-    return [part for part in re.split(r"[+\s,;]+", language.strip()) if part]
-
-
-def _candidate_tessdata_dirs(command: str | None = None) -> list[Path]:
-    candidates: list[Path] = []
-
-    def add(path: str | Path | None) -> None:
-        if not path:
-            return
-        raw = Path(path)
-        for candidate in (raw, raw / "tessdata"):
-            if candidate.is_dir() and candidate not in candidates:
-                candidates.append(candidate)
-
-    add(os.environ.get("TESSDATA_PREFIX"))
-    add(TESSDATA_DIR)
-    add(APP_ROOT / "tessdata")
-    if command:
-        add(Path(command).parent / "tessdata")
-    add(r"C:\Program Files\Tesseract-OCR\tessdata")
-    add(r"C:\Program Files (x86)\Tesseract-OCR\tessdata")
-    return candidates
-
-
-def _languages_in_tessdata_dir(path: Path) -> set[str]:
-    return {item.stem for item in path.glob("*.traineddata") if item.is_file()}
-
-
-def _available_tesseract_languages(command: str | None = None) -> list[str]:
-    languages: set[str] = set()
-    for directory in _candidate_tessdata_dirs(command):
-        languages.update(_languages_in_tessdata_dir(directory))
-
-    if command:
-        try:
-            result = run_hidden_subprocess(
-                [command, "--list-langs"],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=5,
-            )
-        except (OSError, subprocess.SubprocessError):
-            result = None
-        if result and result.returncode == 0:
-            for line in result.stdout.splitlines():
-                clean = line.strip()
-                if clean and not clean.lower().startswith("list of available languages"):
-                    languages.add(clean)
-    return sorted(languages)
-
-
-def _find_tessdata_dir_for_language(language: str, command: str) -> Path | None:
-    needed = set(_language_parts(language))
-    if not needed:
-        return None
-    for directory in _candidate_tessdata_dirs(command):
-        if needed.issubset(_languages_in_tessdata_dir(directory)):
-            return directory
-    return None
-
-
-def _configure_tesseract(language: str | None = None) -> tuple[str, str | None]:
-    command = _find_tesseract()
-    if not command:
-        raise RuntimeError(
-            "Tesseract OCR is not installed or not on PATH. Install Tesseract, set TESSERACT_CMD, "
-            "or run the Docker image before starting VideOCR."
-        )
-
-    tessdata_dir: Path | None = None
-    if language:
-        tessdata_dir = _find_tessdata_dir_for_language(language, command)
-        if not tessdata_dir:
-            requested = _language_parts(language)
-            available = _available_tesseract_languages(command)
-            available_text = ", ".join(available) if available else "none"
-            searched = "; ".join(str(path) for path in _candidate_tessdata_dirs(command))
-            missing = ", ".join(f"{part}.traineddata" for part in requested if part not in available)
-            raise RuntimeError(
-                "Tesseract language data is missing. "
-                f"Missing: {missing or language}. Available languages: {available_text}. "
-                f"Put the missing .traineddata file in {TESSDATA_DIR} or install it into Tesseract's tessdata folder. "
-                f"Searched: {searched}."
-            )
-
-    import pytesseract
-
-    pytesseract.pytesseract.tesseract_cmd = command
-    if tessdata_dir:
-        os.environ["TESSDATA_PREFIX"] = str(tessdata_dir)
-    return command, str(tessdata_dir) if tessdata_dir else None
 
 
 YT_DLP_BROWSER_HEADERS = {
@@ -2762,9 +2645,9 @@ def _videocr_cli_version(cli_path: str | None) -> str | None:
             return match.group(0)
     return None
 
+
 @app.get("/api/system")
 def system_status() -> dict[str, Any]:
-    tesseract_cmd = _find_tesseract()
     videocr_cli = find_videocr_cli()
     videocr_gpu_cli = find_videocr_cli(prefer_gpu=True)
     ffmpeg_path = shutil.which("ffmpeg")
@@ -2784,10 +2667,6 @@ def system_status() -> dict[str, Any]:
         "videocr_gpu_cli_path": videocr_gpu_cli,
         "bundled_tools_dir": str(tools_dir),
         "videocr_build_variant": videocr_build.get("variant"),
-        "tesseract": tesseract_cmd is not None,
-        "tesseract_cmd": tesseract_cmd,
-        "tesseract_languages": _available_tesseract_languages(tesseract_cmd),
-        "tessdata_dirs": [str(path) for path in _candidate_tessdata_dirs(tesseract_cmd)],
         "max_jobs": MAX_WORKERS,
         "yt_dlp_fragment_downloads": YTDLP_FRAGMENT_DOWNLOADS,
         "videocr_cli_version": _videocr_cli_version(videocr_cli),

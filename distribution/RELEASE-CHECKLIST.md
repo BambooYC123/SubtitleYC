@@ -16,7 +16,7 @@
 - [ ] Test install, launch, OCR, download, edit, export, upgrade, and uninstall on a clean Windows VM.
 - [ ] Test CPU mode on a PC without an Nvidia GPU.
 - [ ] Test GPU mode on at least one supported Nvidia system.
-- [ ] Verify every SHA-256 file against its installer.
+- [ ] Verify each local SHA-256 record and compare it with the digest GitHub reports after upload.
 - [ ] Authenticode-sign and timestamp production installers, or prominently disclose an unsigned beta.
 - [ ] Scan the final public files after signing and before upload.
 
@@ -25,7 +25,7 @@
 - [ ] Publish the source repository under the MIT License.
 - [ ] Enable GitHub Issues, Discussions, and Private Vulnerability Reporting.
 - [ ] Publish `v0.2.0-beta.2` as a prerelease from the exact tested commit.
-- [ ] Upload the CPU installer, CUDA 12.9 installer, and every matching `.sha256` file.
+- [ ] Upload only the CPU and CUDA 12.9 setup executables; retain checksums and the build manifest with the release records.
 - [ ] Make CPU the recommended default and explain the GPU hardware requirement.
 - [ ] Keep each GitHub release asset below 2 GiB.
 - [ ] Do not commit installers, signing keys, certificates, logs, user media, build output, or workspace data.

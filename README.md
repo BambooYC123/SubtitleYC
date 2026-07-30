@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 SubtitleYC is open-source software released under the MIT License.
-SubtitleYC is a local Windows desktop app for creating subtitle files from burned-in video captions. It can download a video URL with `yt-dlp` or open a local video, preview and scrub the video, let you draw the subtitle crop area, run the real VideOCR CLI, and export the result as `.srt`, `.txt`, or `.ass`.
+SubtitleYC is an open-source Windows desktop app for extracting, reviewing, and editing subtitles from burned-in video captions. It can download an authorised video URL with `yt-dlp` or open a local video, provide native frame-accurate preview and crop controls, run the VideOCR CLI, and export `.srt`, `.txt`, or `.ass` files.
 
 > **Public beta:** Keep backups and review generated subtitles before relying on them.
 
@@ -215,7 +215,7 @@ workspace\videocr-runtime
 workspace\settings.json
 ```
 
-Use `Logs` to inspect app, download, OCR, and error messages. Use `Storage` to review and clear cleanable generated files. Tessdata is intentionally not clearable from the storage manager.
+Use `Logs` to inspect app, download, OCR, and error messages. Use `Storage` to review and clear generated files that SubtitleYC can safely recreate.
 
 ## Build Windows Releases
 
@@ -234,21 +234,20 @@ For one self-contained edition, provide the matching installed or staged VideOCR
   -VideOCRCliPath "C:\Program Files\VideOCR\videocr-cli-CPU-v1.5.1\videocr-cli.exe"
 ```
 
-Valid variants are `CPU`, `GPU-CUDA-11.8`, and `GPU-CUDA-12.9`. GPU paths must match the requested CUDA edition, which prevents accidentally publishing a mislabeled installer.
+Valid variants are `CPU` and `GPU-CUDA-12.9`. GPU paths must match the requested CUDA edition, which prevents accidentally publishing a mislabeled installer.
 
-For the recommended public matrix, stage the CPU and CUDA 12.9 packages and optionally CUDA 11.8, then run:
+For the public release matrix, stage the matching CPU and CUDA 12.9 packages, then run:
 
 ```powershell
 .\scripts\build-public-releases.ps1 `
   -CpuVideOCRCliPath "C:\VideOCR-Staging\videocr-cli-CPU-v1.5.1\videocr-cli.exe" `
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
-  -GpuCuda118VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-11.8\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
   -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.2.0"
 ```
 
-The matrix requires the same versioned VideOCR package for every edition, compiles SubtitleYC once, then replaces the bundled OCR runtime for each edition. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces edition-specific setup executables, SHA-256 checksum files, and one public-build manifest tying every installer to the same source run. CUDA 11.8 is optional; omit that argument if you are publishing only the default CPU and modern GPU editions. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.
+The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.
 
 Release builds install only hashes pinned in `requirements-release.txt`, run `pip check` and `pip-audit`, collect third-party license files, and verify output checksums.
 

@@ -15,13 +15,10 @@ Do not download SubtitleYC from third-party mirrors.
 - **CPU installer:** Recommended for most users and works without an Nvidia GPU.
 - **GPU CUDA 12.9 installer:** Faster OCR for supported Nvidia GTX 16 through RTX 50 systems, but substantially larger.
 
-CUDA 11.8 is not included in this beta. Nvidia GTX 10 users should install the
-CPU edition.
-
 {{SIGNING_STATUS}}
 
-Each installer has a matching `.sha256` file. Verify the checksum before
-running an unsigned beta installer.
+GitHub displays a SHA-256 digest beside each installer. Compare that digest
+before running an unsigned beta installer.
 
 ## What It Does
 
