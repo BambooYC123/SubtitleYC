@@ -10,7 +10,6 @@ class LicenseBundleTests(unittest.TestCase):
         required = (
             "LICENSE",
             "CONTRIBUTING.md",
-            "MAINTAINERS.md",
             "PRIVACY.md",
             "SECURITY.md",
             "THIRD-PARTY-NOTICES.txt",

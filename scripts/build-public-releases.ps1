@@ -143,7 +143,7 @@ $sourceFiles = @()
 foreach ($sourceInput in @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "distribution",
     "pyproject.toml", "requirements-release.txt", "SubtitleYC.spec", "README.md",
-    "LICENSE", "CONTRIBUTING.md", "MAINTAINERS.md", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt",
+    "LICENSE", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt",
     ".gitignore", "Start-SubtitleYC.bat"
 )) {
     $sourcePath = Join-Path $Root $sourceInput

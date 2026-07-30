@@ -78,7 +78,7 @@ $releaseAssetsDir = Join-Path $destinationPath "release-assets"
 New-Item -ItemType Directory -Path $repositoryDir, $releaseAssetsDir -Force | Out-Null
 $sourceInputs = @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "docs", "distribution", "licenses",
-    ".gitignore", "CONTRIBUTING.md", "MAINTAINERS.md", "LICENSE", "PRIVACY.md",
+    ".gitignore", "CONTRIBUTING.md", "LICENSE", "PRIVACY.md",
     "pyproject.toml", "README.md", "requirements-release.txt", "SECURITY.md", "Start-SubtitleYC.bat",
     "SubtitleYC.spec", "THIRD-PARTY-NOTICES.txt"
 )
@@ -90,7 +90,6 @@ foreach ($sourceInput in $sourceInputs) {
     Copy-Item -LiteralPath $sourcePath -Destination $repositoryDir -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $TemplateDir ".github") -Destination $repositoryDir -Recurse -Force
-Copy-Item -LiteralPath (Join-Path $TemplateDir "RELEASE-NOTES.md") -Destination $repositoryDir -Force
 
 $allSigned = $true
 
@@ -151,6 +150,12 @@ if ($unresolvedTemplates.Count -gt 0) {
     throw "Public repository staging left unresolved template values."
 }
 
+$releaseNotes = [IO.File]::ReadAllText((Join-Path $TemplateDir "RELEASE-NOTES.md"))
+foreach ($replacement in $replacements.GetEnumerator()) {
+    $releaseNotes = $releaseNotes.Replace($replacement.Key, $replacement.Value)
+}
+[IO.File]::WriteAllText((Join-Path $destinationPath "RELEASE-NOTES.md"), $releaseNotes, $utf8NoBom)
+
 $screenshotSourceDir = Join-Path $Root "docs\screenshots"
 $screenshotTargetDir = Join-Path $repositoryDir "docs\screenshots"
 $requiredScreenshots = @(
@@ -166,15 +171,6 @@ foreach ($screenshot in $requiredScreenshots) {
     }
     Copy-Item -LiteralPath $sourcePath -Destination $screenshotTargetDir -Force
 }
-$maintainerRecord = @(
-    "# SubtitleYC Maintainers",
-    "",
-    "- $MaintainerName",
-    "- Support: $SupportUrl",
-    "- Official repository: $cleanRepositoryUrl",
-    "- Staged release: $ReleaseTag"
-)
-Set-Content -LiteralPath (Join-Path $repositoryDir "MAINTAINERS.md") -Value $maintainerRecord -Encoding UTF8
 Copy-Item -LiteralPath (Join-Path $Root "distribution\RELEASE-CHECKLIST.md") -Destination $destinationPath -Force
 Copy-Item -LiteralPath (Join-Path $Root "distribution\BETA-PROGRAM.md") -Destination $destinationPath -Force
 

@@ -81,6 +81,8 @@ class InstallerLayoutTests(unittest.TestCase):
         self.assertIn("exactly the CPU and CUDA 12.9 installers", public_stage)
         self.assertNotIn("$sourcePath, $sourceChecksumPath", public_stage)
         self.assertNotIn("$manifestPath -Destination $releaseAssetsDir", public_stage)
+        self.assertNotIn('Join-Path $TemplateDir "RELEASE-NOTES.md") -Destination $repositoryDir', public_stage)
+        self.assertIn('Join-Path $destinationPath "RELEASE-NOTES.md"', public_stage)
 
 
 if __name__ == "__main__":
