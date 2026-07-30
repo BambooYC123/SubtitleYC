@@ -2056,12 +2056,13 @@ def _run_ocr_job(job_id: str, session_id: str, request: OCRRequest) -> None:
         if subtitle_position not in {"center", "left", "right", "any"}:
             subtitle_position = "center"
 
+        ocr_language = map_language(request.language)
         settings = VideOCRCliSettings(
             crop_x=request.crop.x,
             crop_y=request.crop.y,
             crop_width=request.crop.width,
             crop_height=request.crop.height,
-            language=map_language(request.language),
+            language=ocr_language,
             frames_to_skip=max(0, request.frame_step - 1),
             conf_threshold=request.min_confidence,
             sim_threshold=round(request.similarity * 100),
@@ -2073,8 +2074,8 @@ def _run_ocr_job(job_id: str, session_id: str, request: OCRRequest) -> None:
             brightness_threshold=request.brightness_threshold,
             ssim_threshold=round(request.ssim_threshold * 100),
             subtitle_position=subtitle_position,
-            normalize_to_simplified_chinese=request.normalize_chinese,
-            post_processing=request.post_processing,
+            normalize_to_simplified_chinese=request.normalize_chinese and ocr_language == "ch",
+            post_processing=request.post_processing and ocr_language in {"de", "en", "es", "fr", "it", "pt"},
             min_subtitle_duration=request.min_subtitle_duration,
             ocr_image_max_width=request.max_image_width,
             use_dual_zone=request.use_dual_zone,

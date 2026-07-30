@@ -2,8 +2,7 @@
 
 ## Supported Versions
 
-During public beta, security fixes are provided for the latest published beta
-only. Older builds may remain usable but are not promised security updates.
+Security fixes are provided for the latest published version only. Older builds may remain usable but are not promised security updates.
 
 ## Reporting a Vulnerability
 
@@ -16,14 +15,14 @@ Include the SubtitleYC version and edition, Windows version, steps to reproduce,
 and the smallest non-sensitive log excerpt needed to explain the issue. Do not
 send credentials, cookies, access tokens, private URLs, or private media.
 
-Reports will be assessed on a best-effort basis during beta. Please allow a
+Reports will be assessed on a best-effort basis. Please allow a
 reasonable period for investigation and a fixed release before publicly
 disclosing a confirmed vulnerability.
 
 ## Release Verification
 
 Download SubtitleYC only from its official release page. Every release asset
-is published with a SHA-256 checksum. Public beta installers may be unsigned;
+is published with a SHA-256 checksum. Installers may be unsigned;
 the release notes must clearly identify signing status. A production
 release should be Authenticode-signed and timestamped.
 

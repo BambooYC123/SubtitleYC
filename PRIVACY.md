@@ -8,7 +8,7 @@ access through the app.
 
 ## Short Version
 
-SubtitleYC 0.2.0 beta does not include accounts, advertising, analytics,
+SubtitleYC 0.3.0 does not include accounts, advertising, analytics,
 telemetry, a licence server, or automatic crash-report uploads. Videos,
 subtitles, settings, and logs are processed and stored on the user's computer.
 Nothing is sent to the SubtitleYC maintainers unless the user chooses to submit
@@ -42,7 +42,7 @@ services can receive normal connection information such as the user's IP
 address, requested URL, and user-agent details. Their own terms and privacy
 policies apply. SubtitleYC does not operate those services.
 
-The beta does not automatically check for app updates. Windows, antivirus,
+SubtitleYC does not automatically check for app updates. Windows, antivirus,
 certificate, or operating-system services may independently perform their own
 reputation or security checks.
 

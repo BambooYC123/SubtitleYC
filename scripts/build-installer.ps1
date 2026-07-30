@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.2.0",
-    [string]$ReleaseLabel = "0.2.0-beta.2",
+    [string]$Version = "0.3.0",
+    [string]$ReleaseLabel = "0.3.0",
     [switch]$BundleExternalTools,
     [switch]$SkipAppBuild,
     [switch]$SkipPortableZip,

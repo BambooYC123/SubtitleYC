@@ -117,11 +117,55 @@ def find_videocr_cli(prefer_gpu: bool = False) -> str | None:
                 return str(matches[0])
     return None
 
+_LANGUAGE_ALIASES = {
+    "eng": "en",
+    "chi_sim": "ch",
+    "eng+chi_sim": "ch",
+    "chi_tra": "chinese_cht",
+    "eng+chi_tra": "chinese_cht",
+}
+
+_SUPPORTED_PADDLEOCR_LANGUAGES = frozenset(
+    {
+        "ar",
+        "ch",
+        "chinese_cht",
+        "de",
+        "en",
+        "es",
+        "fa",
+        "fr",
+        "hi",
+        "id",
+        "it",
+        "japan",
+        "kk",
+        "korean",
+        "mn",
+        "mr",
+        "ms",
+        "ne",
+        "pt",
+        "ru",
+        "ta",
+        "te",
+        "th",
+        "tl",
+        "tr",
+        "ug",
+        "uk",
+        "ur",
+        "vi",
+    }
+)
+
+
 def map_language(language: str) -> str:
-    parts = {part.strip().casefold() for part in re.split(r"[+\s,;]+", language) if part.strip()}
-    if parts and all(part in {"eng", "en"} for part in parts):
-        return "en"
-    return "ch"
+    normalized = language.strip().casefold()
+    mapped = _LANGUAGE_ALIASES.get(normalized, normalized)
+    if mapped not in _SUPPORTED_PADDLEOCR_LANGUAGES:
+        raise ValueError(f"Unsupported VideOCR language: {language}")
+    return mapped
 
 
 def bool_arg(value: bool) -> str:

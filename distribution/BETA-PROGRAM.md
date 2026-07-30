@@ -1,10 +1,10 @@
-# SubtitleYC Open-Source Beta Program
+# SubtitleYC Open-Source Testing Program
 
-## Recommended First Release
+## Recommended Test Release
 
-Publish `v0.2.0-beta.2` free of charge to a small group of Windows users. Treat
-it as a real release, but label it clearly as prerelease software. Publish the
-tested source commit under the MIT License alongside the installer artifacts.
+Publish `v0.3.0` free of charge to a small group of Windows users before broad
+promotion. Treat it as a real release and publish the tested source commit under
+the MIT License alongside the installer artifacts.
 
 Start with roughly 20 to 50 testers who use different video sources, languages,
 Nvidia generations, and CPU-only PCs. Do not add telemetry just to measure the

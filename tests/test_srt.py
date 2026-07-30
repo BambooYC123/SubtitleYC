@@ -40,12 +40,12 @@ def authenticated_client() -> TestClient:
 
 
 class TestSrt(unittest.TestCase):
-    def test_system_status_reports_exact_beta_release(self):
-        self.assertEqual(__version__, "0.2.0")
-        self.assertEqual(__release__, "0.2.0-beta.2")
+    def test_system_status_reports_exact_release(self):
+        self.assertEqual(__version__, "0.3.0")
+        self.assertEqual(__release__, "0.3.0")
         response = authenticated_client().get("/api/system")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["release_label"], "0.2.0-beta.2")
+        self.assertEqual(response.json()["release_label"], "0.3.0")
 
     def test_download_format_limits_resolution(self):
         self.assertIn("height<=720", _download_format(720))
@@ -240,6 +240,43 @@ class TestSrt(unittest.TestCase):
         self.assertEqual(map_language("eng"), "en")
         self.assertEqual(map_language("chi_sim"), "ch")
         self.assertEqual(map_language("eng+chi_sim"), "ch")
+        self.assertEqual(map_language("chi_tra"), "chinese_cht")
+        self.assertEqual(map_language("eng+chi_tra"), "chinese_cht")
+
+    def test_videocr_language_mapping_passes_supported_models_through(self):
+        expected = {
+            "japan",
+            "korean",
+            "vi",
+            "th",
+            "id",
+            "ms",
+            "tl",
+            "hi",
+            "mr",
+            "ne",
+            "ta",
+            "te",
+            "ar",
+            "fa",
+            "ur",
+            "ug",
+            "tr",
+            "kk",
+            "mn",
+            "es",
+            "fr",
+            "de",
+            "pt",
+            "it",
+            "ru",
+            "uk",
+        }
+        self.assertEqual({map_language(language) for language in expected}, expected)
+
+    def test_videocr_language_mapping_rejects_unknown_models(self):
+        with self.assertRaisesRegex(ValueError, "Unsupported VideOCR language"):
+            map_language("not-a-language")
 
     def test_videocr_cli_finder_prefers_gpu_build_when_requested(self):
         with tempfile.TemporaryDirectory() as root:

@@ -5,13 +5,13 @@
 SubtitleYC is open-source software released under the MIT License.
 SubtitleYC is an open-source Windows desktop app for extracting, reviewing, and editing subtitles from burned-in video captions. It can download an authorised video URL with `yt-dlp` or open a local video, provide native frame-accurate preview and crop controls, run the VideOCR CLI, and export `.srt`, `.txt`, or `.ass` files.
 
-> **Public beta:** Keep backups and review generated subtitles before relying on them.
+> **Early release:** Keep backups and review generated subtitles before relying on them.
 
 ## Download
 
 Download Windows builds from [GitHub Releases](https://github.com/EricYC123/SubtitleYC/releases). The CPU edition works without an Nvidia GPU; the CUDA edition provides faster OCR on supported Nvidia systems.
 
-The Beta 2 installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
+The installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
 
 The app opens as a normal desktop window. Internally it runs a private local FastAPI backend bound to `127.0.0.1`, so normal users do not need to manage a server or browser tab.
 
@@ -113,8 +113,8 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.2.0-beta.2-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.2.0-beta.2-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.3.0-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.3.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
@@ -176,7 +176,15 @@ The Settings drawer can save defaults for:
 - Brightness threshold and max OCR image width.
 - Server model, GPU acceleration, full-frame OCR, angle classification, post-processing, and Traditional Chinese normalization.
 
-The first-run OCR language is English + Chinese Simplified. Chinese and mixed Chinese/English options map to VideOCR's `ch` PaddleOCR model; English-only maps to `en`. GPU acceleration requires a compatible GPU and the VideOCR GPU build. When both CPU and GPU builds are installed, SubtitleYC prefers the matching executable for the selected mode.
+The first-run OCR language is English + Chinese Simplified. SubtitleYC exposes
+VideOCR's local PaddleOCR models for common East, Southeast, South, West, and
+Central Asian languages, along with major European languages. This includes
+Simplified and Traditional Chinese, Japanese, Korean, Vietnamese, Thai,
+Indonesian, Malay, Filipino/Tagalog, Hindi, Marathi, Nepali, Tamil, Telugu,
+Arabic, Persian, Urdu, Uyghur, Turkish, Kazakh, and Mongolian. GPU acceleration
+requires a compatible GPU and the VideOCR GPU build. When both CPU and GPU
+builds are installed, SubtitleYC prefers the matching executable for the
+selected mode.
 
 ## Keyboard Shortcuts
 
@@ -244,7 +252,7 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.2.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.3.0"
 ```
 
 The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.

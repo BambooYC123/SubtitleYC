@@ -1,6 +1,6 @@
 param(
-    [string]$AppVersion = "0.2.0",
-    [string]$ReleaseTag = "v0.2.0-beta.2",
+    [string]$AppVersion = "0.3.0",
+    [string]$ReleaseTag = "v0.3.0",
     [Parameter(Mandatory = $true)]
     [string]$ArtifactsRoot,
     [Parameter(Mandatory = $true)]
@@ -31,8 +31,8 @@ if ([string]::IsNullOrWhiteSpace($MaintainerName) -or $MaintainerName -match '(?
 }
 Assert-HttpsUrl -Name "SupportUrl" -Value $SupportUrl
 Assert-HttpsUrl -Name "RepositoryUrl" -Value $RepositoryUrl
-if ($ReleaseTag -notmatch '^v\d+\.\d+\.\d+-beta\.\d+$') {
-    throw "ReleaseTag must look like v0.2.0-beta.2."
+if ($ReleaseTag -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+    throw "ReleaseTag must look like v0.3.0 or v0.3.0-beta.1."
 }
 $releaseLabel = $ReleaseTag.Substring(1)
 
@@ -114,7 +114,7 @@ foreach ($artifact in @($manifest.artifacts)) {
     if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
         $allSigned = $false
         if (-not $AllowUnsigned) {
-            throw "$fileName is not Authenticode-signed. Pass -AllowUnsigned only for a clearly disclosed public beta."
+            throw "$fileName is not Authenticode-signed. Pass -AllowUnsigned only when the release clearly discloses this."
         }
     }
     Copy-Item -LiteralPath $sourcePath -Destination $releaseAssetsDir -Force
@@ -123,7 +123,7 @@ foreach ($artifact in @($manifest.artifacts)) {
 $signingStatus = if ($allSigned) {
     "The installers are Authenticode-signed and timestamped."
 } else {
-    "These beta installers are not Authenticode-signed. Windows may show an unknown-publisher warning; compare the SHA-256 digest shown by GitHub before running them."
+    "These installers are not Authenticode-signed. Windows may show an unknown-publisher warning; compare the SHA-256 digest shown by GitHub before running them."
 }
 $cleanRepositoryUrl = $RepositoryUrl -replace '/+$', ''
 $replacements = [ordered]@{

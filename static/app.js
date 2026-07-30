@@ -73,8 +73,90 @@ const PREVIEW_MAX_PREFETCHES = 3;
 const CUE_BOUNDARY_EPSILON_SECONDS = 0.000001;
 const URL_FORMAT_PROBE_DEBOUNCE_MS = 900;
 const SUBTITLE_OVERLAY_POSITION_STORAGE_KEY = "subtitleyc:subtitle-overlay-position";
+const OCR_LANGUAGES = [
+  ["ar", "Arabic"],
+  ["chi_sim", "Chinese Simplified"],
+  ["chi_tra", "Chinese Traditional"],
+  ["eng", "English"],
+  ["eng+chi_sim", "English + Chinese Simplified"],
+  ["eng+chi_tra", "English + Chinese Traditional"],
+  ["tl", "Filipino / Tagalog"],
+  ["fr", "French"],
+  ["de", "German"],
+  ["hi", "Hindi"],
+  ["id", "Indonesian"],
+  ["it", "Italian"],
+  ["japan", "Japanese"],
+  ["kk", "Kazakh"],
+  ["korean", "Korean"],
+  ["ms", "Malay"],
+  ["mr", "Marathi"],
+  ["mn", "Mongolian"],
+  ["ne", "Nepali"],
+  ["fa", "Persian"],
+  ["pt", "Portuguese"],
+  ["ru", "Russian"],
+  ["es", "Spanish"],
+  ["ta", "Tamil"],
+  ["te", "Telugu"],
+  ["th", "Thai"],
+  ["tr", "Turkish"],
+  ["uk", "Ukrainian"],
+  ["ur", "Urdu"],
+  ["ug", "Uyghur"],
+  ["vi", "Vietnamese"],
+];
+const OCR_SITE_SUBTITLE_LANGUAGES = {
+  ar: "ar,en.*",
+  de: "de,en.*",
+  eng: "en.*",
+  es: "es,en.*",
+  fa: "fa,en.*",
+  fr: "fr,en.*",
+  hi: "hi,en.*",
+  id: "id,en.*",
+  it: "it,en.*",
+  japan: "ja,en.*",
+  kk: "kk,en.*",
+  korean: "ko,en.*",
+  mn: "mn,en.*",
+  mr: "mr,en.*",
+  ms: "ms,en.*",
+  ne: "ne,en.*",
+  pt: "pt,en.*",
+  ru: "ru,en.*",
+  ta: "ta,en.*",
+  te: "te,en.*",
+  th: "th,en.*",
+  tl: "fil,tl,en.*",
+  tr: "tr,en.*",
+  ug: "ug,en.*",
+  uk: "uk,en.*",
+  ur: "ur,en.*",
+  vi: "vi,en.*",
+};
 
 const reportedFrontendCrashes = new Set();
+
+function populateOcrLanguageSelect(select) {
+  if (!select) return;
+  const selected = select.value || "eng+chi_sim";
+  const fragment = document.createDocumentFragment();
+  for (const [value, label] of OCR_LANGUAGES) {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    fragment.append(option);
+  }
+  select.replaceChildren(fragment);
+  const values = Array.from(select.options, (option) => option.value);
+  select.value = values.includes(selected) ? selected : "eng+chi_sim";
+}
+
+function populateOcrLanguageSelects() {
+  populateOcrLanguageSelect(elements.languageInput);
+  populateOcrLanguageSelect(elements.settingLanguageInput);
+}
 
 function normalizeCrashText(value) {
   if (value instanceof Error) return value.stack || value.message || String(value);
@@ -3248,7 +3330,7 @@ function selectedDownloadSubtitleLanguages() {
   if (wantsEnglish && wantsSimplified) return "en,zh-Hans,zh-CN";
   if (wantsTraditional) return "zh-Hant,zh-TW,en.*";
   if (wantsSimplified) return "zh-Hans,zh-CN,en.*";
-  return "en.*";
+  return OCR_SITE_SUBTITLE_LANGUAGES[language] || "en.*";
 }
 
 function subtitleLanguageMatches(language, requested) {
@@ -3441,7 +3523,7 @@ async function downloadSelectedSubtitle() {
   setStatus(`Subtitle saved: ${result.path || result.filename || "subtitle file"}`, 1);
 }
 function isChineseLanguage(language) {
-  return language.includes("chi_");
+  return language.includes("chi_") || language === "ch" || language === "chinese_cht";
 }
 
 function setOcrRangeLabels() {
@@ -4005,6 +4087,7 @@ setupDraggableSubtitleOverlay();
 bindSettingsAutosave();
 
 async function init() {
+  populateOcrLanguageSelects();
   renderActivities();
   resizeCanvas();
   applyLanguageDefaults();

@@ -1,19 +1,18 @@
-# SubtitleYC v0.2.0 Beta 2
+# SubtitleYC v0.3.0
 
 SubtitleYC is a free and open-source Windows app for extracting, reviewing,
 and editing frame-timed subtitles from video.
 
-## MIT Release
-
-Beta 2 is the first release whose installers, bundled application files, and
-installer licence page consistently use the MIT License. Bundled third-party
-tools retain their own licences, which are included with the installation.
+SubtitleYC is distributed under the MIT License. Bundled third-party tools
+retain their own licences, which are included with the installation.
 
 ## Highlights
 
 - Local video and URL workflows in one desktop app.
 - Native PyAV frame preview with crop selection and subtitle overlay.
 - CPU and Nvidia GPU VideOCR editions.
+- 31 alphabetically listed OCR language choices, including common Asian languages.
+- Correct Simplified and Traditional Chinese VideOCR language mapping.
 - Subtitle import, cue timing edits, undo/redo, and SRT export.
 - yt-dlp format and site-subtitle discovery.
 - Project library, storage controls, activity rows, local logs, and crash logs.
@@ -29,7 +28,7 @@ the user's workspace under `%LOCALAPPDATA%\SubtitleYC\workspace`.
 
 ## Known Limitations
 
-- This is prerelease software and may still contain crashes or UI defects.
+- This is an early release and may still contain crashes or UI defects.
 - OCR accuracy depends on language, image quality, crop, and source frame rate.
 - Video websites change independently; yt-dlp workflows can require app updates.
 - The GPU installer is large because it includes the CUDA OCR runtime.
@@ -41,7 +40,7 @@ GitHub displays a SHA-256 digest beside each installer asset. To calculate the
 digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.2.0-beta.2-windows-cpu-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.3.0-windows-cpu-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the digest shown on the release page before installation.

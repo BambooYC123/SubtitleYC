@@ -4,12 +4,12 @@ SubtitleYC is a local Windows app for extracting, reviewing, and editing
 frame-timed subtitles from burned-in video captions. It combines a native PyAV
 preview, VideOCR, yt-dlp, and FFmpeg in one desktop workflow.
 
-> **Public beta:** This release is intended for testing and may contain defects.
+> **Early release:** This version is intended for testing and may contain defects.
 > Keep backups and review generated subtitles before relying on them.
 
 ## Download
 
-Download the latest beta from [GitHub Releases]({{REPOSITORY_URL}}/releases/tag/{{RELEASE_TAG}}).
+Download the latest version from [GitHub Releases]({{REPOSITORY_URL}}/releases/tag/{{RELEASE_TAG}}).
 Do not download SubtitleYC from third-party mirrors.
 
 - **CPU installer:** Recommended for most users and works without an Nvidia GPU.
@@ -18,7 +18,7 @@ Do not download SubtitleYC from third-party mirrors.
 {{SIGNING_STATUS}}
 
 GitHub displays a SHA-256 digest beside each installer. Compare that digest
-before running an unsigned beta installer.
+before running an unsigned installer.
 
 ## What It Does
 
@@ -65,7 +65,7 @@ Security reports must follow [SECURITY.md](SECURITY.md), not a public issue.
 
 ## Privacy and Licensing
 
-SubtitleYC processes media locally and has no telemetry in this beta. Network
+SubtitleYC processes media locally and has no telemetry. Network
 features contact websites selected by the user. Read the [Privacy Notice](PRIVACY.md).
 
 SubtitleYC is open-source software under the [MIT License](LICENSE). Source,
