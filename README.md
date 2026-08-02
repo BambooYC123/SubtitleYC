@@ -316,6 +316,24 @@ python -m compileall subtitleyc tests
 Issues and pull requests are welcome. See `CONTRIBUTING.md` for environment,
 testing, contribution, and security-reporting guidance.
 
+## Acknowledgements
+
+SubtitleYC is made possible by the work of these open-source projects and their
+contributors:
+
+- [VideOCR](https://github.com/timminator/VideOCR) provides the command-line OCR workflow used to extract burned-in subtitles.
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) provides video, format, and site-subtitle downloading.
+- [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR) provides the text-recognition engine used by VideOCR.
+- [FFmpeg](https://github.com/FFmpeg/FFmpeg) provides media probing, conversion, and stream processing.
+- [PyAV](https://github.com/PyAV-Org/PyAV) provides direct frame decoding for SubtitleYC's native video preview.
+- [Qt for Python / PySide6](https://code.qt.io/cgit/pyside/pyside-setup.git/) provides the desktop window, WebEngine integration, and native interface components.
+- [FastAPI](https://github.com/fastapi/fastapi) provides the private local API connecting the interface to SubtitleYC's Python services.
+- [PyInstaller](https://github.com/pyinstaller/pyinstaller) and [Inno Setup](https://github.com/jrsoftware/issrc) provide Windows application and installer packaging.
+
+Thank you to the maintainers and contributors of these projects. Their software
+remains under its respective licence; see `THIRD-PARTY-NOTICES.txt` and the
+`licenses` directory for detailed notices and source information.
+
 ## Licensing
 
 SubtitleYC is open-source software licensed under the MIT License. You may use,
