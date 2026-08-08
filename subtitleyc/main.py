@@ -103,6 +103,7 @@ RESULTS_DIR = DATA_DIR / "results"
 VIDEOCR_RUNTIME_DIR = DATA_DIR / "videocr-runtime"
 LOG_DIR = DATA_DIR / "logs"
 SETTINGS_PATH = DATA_DIR / "settings.json"
+INSTALL_LANGUAGE_MARKER_PATH = DATA_DIR / ".installer-language-applied"
 LOCAL_PROJECTS_PATH = DATA_DIR / "local-videos.json"
 for directory in (
     UPLOAD_DIR,
@@ -294,6 +295,7 @@ class OCRRequest(BaseModel):
 
 class AppSettings(BaseModel):
     theme: str = Field(default="dark", pattern="^(dark|light)$")
+    ui_language: str = Field(default="en", pattern="^(en|zh-CN)$")
     default_download_dir: str | None = Field(default=None, max_length=4096)
     default_url_source: str = Field(default="youtube", max_length=16)
     default_resolution: str = Field(default="1080", max_length=16)
@@ -927,6 +929,36 @@ def _settings_response(settings: AppSettings | None = None) -> dict[str, Any]:
     return {"settings": current, "defaults": _default_settings()}
 
 
+def _consume_installer_ui_language() -> str | None:
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\SubtitleYC") as key:
+            installer_language, _value_type = winreg.QueryValueEx(key, "InstallerUILanguage")
+            installer_version, _version_type = winreg.QueryValueEx(key, "InstallerVersion")
+    except (FileNotFoundError, OSError, ImportError):
+        return None
+    normalized = {
+        "english": "en",
+        "chinesesimplified": "zh-CN",
+    }.get(str(installer_language).strip().casefold())
+    if not normalized:
+        return None
+    marker = f"{str(installer_version).strip()}:{normalized}"
+    try:
+        if INSTALL_LANGUAGE_MARKER_PATH.read_text(encoding="utf-8").strip() == marker:
+            return None
+    except OSError:
+        pass
+    try:
+        INSTALL_LANGUAGE_MARKER_PATH.write_text(marker, encoding="utf-8")
+    except OSError:
+        log_event("Could not record installer language choice", category="settings", level=logging.WARNING)
+    return normalized
+
+
 def _load_settings() -> AppSettings:
     payload: dict[str, Any] = {}
     if SETTINGS_PATH.is_file():
@@ -936,6 +968,13 @@ def _load_settings() -> AppSettings:
                 payload = loaded
         except (OSError, json.JSONDecodeError):
             log_event("Could not read settings file; using defaults", category="settings", level=logging.WARNING)
+    installer_language = _consume_installer_ui_language()
+    if installer_language:
+        payload["ui_language"] = installer_language
+        try:
+            SETTINGS_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        except OSError:
+            log_event("Could not persist installer language choice", category="settings", level=logging.WARNING)
     return AppSettings.model_validate({**_default_settings(), **payload})
 
 

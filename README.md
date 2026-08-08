@@ -11,7 +11,7 @@ SubtitleYC is an open-source Windows desktop app for extracting, reviewing, and 
 
 ## Download
 
-Download Windows builds from [GitHub Releases](https://github.com/EricYC123/SubtitleYC/releases). The CPU edition works without an Nvidia GPU; the CUDA edition provides faster OCR on supported Nvidia systems.
+Download Windows builds from [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases). The CPU edition works without an Nvidia GPU; the CUDA edition provides faster OCR on supported Nvidia systems.
 
 The installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
 
@@ -69,7 +69,8 @@ The installer keeps application files under `Program Files\SubtitleYC` by defaul
 - Separate activity rows for downloads and OCR jobs, with stop buttons for active jobs.
 - In-app logs drawer with filtering, copy, save, refresh, and clear actions.
 - In-app storage manager for clearing downloads, uploads, previews, generated subtitle files, VideOCR runtime files, and logs.
-- Settings drawer for default download folder, theme, OCR language, output format, and OCR/timing defaults.
+- English and Simplified Chinese interfaces, with the installer language carried into the app on first launch.
+- Settings drawer for app language, default download folder, theme, OCR language, output format, and OCR/timing defaults.
 
 ## Subtitle Workflow
 
@@ -115,8 +116,8 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.3.0-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.3.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.4.0-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.4.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
@@ -254,7 +255,7 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.3.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.4.0"
 ```
 
 The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.

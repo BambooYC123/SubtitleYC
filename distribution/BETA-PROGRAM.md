@@ -2,7 +2,7 @@
 
 ## Recommended Test Release
 
-Publish `v0.3.0` free of charge to a small group of Windows users before broad
+Publish `v0.4.0` free of charge to a small group of Windows users before broad
 promotion. Treat it as a real release and publish the tested source commit under
 the MIT License alongside the installer artifacts.
 

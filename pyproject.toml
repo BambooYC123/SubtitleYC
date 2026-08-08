@@ -1,6 +1,6 @@
 [project]
 name = "subtitleyc"
-version = "0.3.0"
+version = "0.4.0"
 description = "Open-source Windows app for extracting, reviewing, and editing subtitles from burned-in video captions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,9 +28,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/EricYC123/SubtitleYC"
-Repository = "https://github.com/EricYC123/SubtitleYC"
-Issues = "https://github.com/EricYC123/SubtitleYC/issues"
+Homepage = "https://github.com/BambooYC123/SubtitleYC"
+Repository = "https://github.com/BambooYC123/SubtitleYC"
+Issues = "https://github.com/BambooYC123/SubtitleYC/issues"
 
 [project.optional-dependencies]
 dev = [

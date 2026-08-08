@@ -1,4 +1,4 @@
-# SubtitleYC v0.3.0
+# SubtitleYC v0.4.0
 
 SubtitleYC is a free and open-source Windows app for extracting, reviewing,
 and editing frame-timed subtitles from video.
@@ -17,6 +17,9 @@ retain their own licences, which are included with the installation.
 - yt-dlp format and site-subtitle discovery.
 - Project library, storage controls, activity rows, local logs, and crash logs.
 - Dark and light themes with persisted settings.
+- English and Simplified Chinese app interfaces.
+- English or Simplified Chinese can be selected on the installer's first screen.
+- The installer language becomes the app language on first launch and can be changed later in Settings.
 
 ## Choose an Installer
 
@@ -40,7 +43,7 @@ GitHub displays a SHA-256 digest beside each installer asset. To calculate the
 digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.3.0-windows-cpu-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.4.0-windows-cpu-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the digest shown on the release page before installation.

@@ -74,6 +74,7 @@ BRIDGE_SCRIPT = r"""
         "set_native_preview_visible",
         "open_subtitle_editor",
         "set_shell_theme",
+        "set_shell_language",
         "open_file_location"
       ];
       window.pywebview = window.pywebview || {};
@@ -589,6 +590,7 @@ BRIDGE_ALLOWED_METHODS = frozenset(
         "set_native_preview_visible",
         "open_subtitle_editor",
         "set_shell_theme",
+        "set_shell_language",
         "open_file_location",
     }
 )
@@ -670,6 +672,9 @@ class QtDesktopBridge(QObject):
         self.preview_surface = preview_surface
         self.session_cache: dict[str, dict[str, Any]] = {}
 
+    def _tr(self, english: str, chinese: str) -> str:
+        return chinese if self.window.shell_language == "zh-CN" else english
+
     @Slot(str, str, str)
     def call(self, name: str, args_json: str, request_id: str) -> None:
         try:
@@ -720,9 +725,12 @@ class QtDesktopBridge(QObject):
             start_dir = videos_dir if videos_dir.is_dir() else Path.home()
         selected, _filter = QFileDialog.getOpenFileName(
             self.window,
-            "Open video file",
+            self._tr("Open video file", "打开视频文件"),
             str(start_dir),
-            "Video files (*.mp4 *.mkv *.webm *.mov *.m4v *.avi);;All files (*.*)",
+            self._tr(
+                "Video files (*.mp4 *.mkv *.webm *.mov *.m4v *.avi);;All files (*.*)",
+                "视频文件 (*.mp4 *.mkv *.webm *.mov *.m4v *.avi);;所有文件 (*.*)",
+            ),
         )
         if not selected:
             return {"ok": False, "cancelled": True}
@@ -732,7 +740,11 @@ class QtDesktopBridge(QObject):
         if not start_dir.is_dir():
             downloads_dir = Path.home() / "Downloads"
             start_dir = downloads_dir if downloads_dir.is_dir() else Path.home()
-        selection = QFileDialog.getExistingDirectory(self.window, "Choose download folder", str(start_dir))
+        selection = QFileDialog.getExistingDirectory(
+            self.window,
+            self._tr("Choose download folder", "选择下载文件夹"),
+            str(start_dir),
+        )
         if not selection:
             return {"ok": False, "cancelled": True}
         return {"ok": True, "path": str(Path(selection))}
@@ -743,9 +755,9 @@ class QtDesktopBridge(QObject):
             safe_name = f"{Path(safe_name).stem or 'subtitles'}.srt"
         selected, _filter = QFileDialog.getSaveFileName(
             self.window,
-            "Save subtitle file",
+            self._tr("Save subtitle file", "保存字幕文件"),
             str(Path.home() / safe_name),
-            "SubRip subtitles (*.srt);;All files (*.*)",
+            self._tr("SubRip subtitles (*.srt);;All files (*.*)", "SubRip 字幕 (*.srt);;所有文件 (*.*)"),
         )
         if not selected:
             return {"ok": False, "cancelled": True}
@@ -773,16 +785,19 @@ class QtDesktopBridge(QObject):
         safe_name = Path(suggested_name or "subtitles.srt").name
         suffix = Path(safe_name).suffix.casefold() or ".srt"
         filters = {
-            ".srt": "SubRip subtitles (*.srt)",
-            ".txt": "Plain text subtitles (*.txt)",
-            ".ass": "Advanced SubStation Alpha (*.ass)",
+            ".srt": self._tr("SubRip subtitles (*.srt)", "SubRip 字幕 (*.srt)"),
+            ".txt": self._tr("Plain text subtitles (*.txt)", "纯文本字幕 (*.txt)"),
+            ".ass": self._tr("Advanced SubStation Alpha (*.ass)", "Advanced SubStation Alpha 字幕 (*.ass)"),
         }
-        file_filter = filters.get(suffix, "Subtitle files (*.srt *.txt *.ass)")
+        file_filter = filters.get(
+            suffix,
+            self._tr("Subtitle files (*.srt *.txt *.ass)", "字幕文件 (*.srt *.txt *.ass)"),
+        )
         selected, _filter = QFileDialog.getSaveFileName(
             self.window,
-            "Save subtitles",
+            self._tr("Save subtitles", "保存字幕"),
             str(Path.home() / safe_name),
-            f"{file_filter};;All files (*.*)",
+            f"{file_filter};;{self._tr('All files (*.*)', '所有文件 (*.*)')}",
         )
         if not selected:
             return {"ok": False, "cancelled": True}
@@ -816,6 +831,10 @@ class QtDesktopBridge(QObject):
     def set_shell_theme(self, theme: str = "dark") -> dict[str, object]:
         self.window.apply_shell_theme(str(theme or "dark"))
         return {"ok": True, "theme": self.window.shell_theme}
+
+    def set_shell_language(self, language: str = "en") -> dict[str, object]:
+        self.window.apply_shell_language(str(language or "en"))
+        return {"ok": True, "language": self.window.shell_language}
 
 
 class EditorPreviewTab(QWidget):
@@ -887,6 +906,7 @@ class QtDesktopWindow(QMainWindow):
         self.tabs.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.tabs.tabBar().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.shell_theme = "dark"
+        self.shell_language = "en"
         self.apply_shell_theme("dark")
         self.tabs.tabCloseRequested.connect(self.close_tab)
         self.tabs.currentChanged.connect(self.on_current_tab_changed)
@@ -1072,6 +1092,26 @@ class QtDesktopWindow(QMainWindow):
             editor.apply_theme(self.shell_theme)
             editor.web.page().runJavaScript(script)
 
+    def apply_shell_language(self, language: str = "en") -> None:
+        self.shell_language = "zh-CN" if language == "zh-CN" else "en"
+        editor_label = "SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "SubtitleYC Editor"
+        close_label = "关闭 SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "Close SubtitleYC Editor"
+        for index in range(self.tabs.count()):
+            widget = self.tabs.widget(index)
+            if widget is self.container:
+                self.tabs.setTabText(index, "SubtitleYC")
+                continue
+            if isinstance(widget, EditorPreviewTab):
+                self.tabs.setTabText(index, editor_label)
+                button = self.tabs.tabBar().tabButton(index, QTabBar.ButtonPosition.RightSide)
+                if isinstance(button, QToolButton):
+                    button.setToolTip(close_label)
+                    button.setAccessibleName(close_label)
+        language_json = json.dumps(self.shell_language)
+        script = f"window.subtitleycApplyExternalLanguage && window.subtitleycApplyExternalLanguage({language_json});"
+        for editor in list(self.editor_tabs.values()):
+            editor.web.page().runJavaScript(script)
+
     def close_tab(self, index: int) -> None:
         widget = self.tabs.widget(index)
         if widget is self.container:
@@ -1090,8 +1130,9 @@ class QtDesktopWindow(QMainWindow):
         button.setAutoRaise(True)
         button.setFixedSize(28, 20)
         button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton))
-        button.setToolTip("Close SubtitleYC Editor")
-        button.setAccessibleName("Close SubtitleYC Editor")
+        close_label = "关闭 SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "Close SubtitleYC Editor"
+        button.setToolTip(close_label)
+        button.setAccessibleName(close_label)
         button.clicked.connect(lambda _checked=False: self.close_tab(self.tabs.indexOf(editor)))
         return button
 
@@ -1111,7 +1152,8 @@ class QtDesktopWindow(QMainWindow):
         if editor is None or self.tabs.indexOf(editor) < 0:
             editor = EditorPreviewTab(self, clean_session_id)
             self.editor_tabs[key] = editor
-            tab_index = self.tabs.addTab(editor, "SubtitleYC Editor")
+            editor_label = "SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "SubtitleYC Editor"
+            tab_index = self.tabs.addTab(editor, editor_label)
             close_button = self._make_tab_close_button(editor)
             self.tabs.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, close_button)
         else:

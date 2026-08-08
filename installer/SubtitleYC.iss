@@ -1,9 +1,9 @@
 #define AppName "SubtitleYC"
 #ifndef AppVersion
-#define AppVersion "0.3.0"
+#define AppVersion "0.4.0"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.3.0"
+#define AppDisplayVersion "0.4.0"
 #endif
 
 #ifndef AppEdition
@@ -16,7 +16,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.3.0-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.4.0-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"
@@ -28,9 +28,9 @@ AppName={#AppName}
 AppVersion={#AppDisplayVersion}
 AppVerName={#AppName} {#AppDisplayVersion} - {#AppEdition}
 AppPublisher=EricYC123
-AppPublisherURL=https://github.com/EricYC123/SubtitleYC
-AppSupportURL=https://github.com/EricYC123/SubtitleYC/issues
-AppUpdatesURL=https://github.com/EricYC123/SubtitleYC/releases
+AppPublisherURL=https://github.com/BambooYC123/SubtitleYC
+AppSupportURL=https://github.com/BambooYC123/SubtitleYC/issues
+AppUpdatesURL=https://github.com/BambooYC123/SubtitleYC/releases
 DefaultDirName={code:GetDefaultDirName}
 DefaultGroupName=SubtitleYC
 DisableDirPage=no
@@ -42,6 +42,7 @@ OutputBaseFilename={#OutputBaseFilename}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+ShowLanguageDialog=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
@@ -59,13 +60,22 @@ InfoBeforeFile=before-install.txt
 SetupIconFile={#IconFile}
 
 [Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "before-install.txt"
+Name: "chinesesimplified"; MessagesFile: "ChineseSimplified.isl"; InfoBeforeFile: "before-install.zh-CN.txt"
 
 [Messages]
-SelectDirDesc=Choose where SubtitleYC's application files should be installed.
-SelectDirLabel3=Program Files is recommended. To use another drive, choose its Program Files folder. Desktop and Start Menu shortcuts are created automatically.
-ReadyMemoDir=Install folder:
-ReadyMemoGroup=Start Menu folder:
+english.SelectDirDesc=Choose where SubtitleYC's application files should be installed.
+english.SelectDirLabel3=Program Files is recommended. To use another drive, choose its Program Files folder. Desktop and Start Menu shortcuts are created automatically.
+english.ReadyMemoDir=Install folder:
+english.ReadyMemoGroup=Start Menu folder:
+chinesesimplified.SelectDirDesc=选择 SubtitleYC 应用文件的安装位置。
+chinesesimplified.SelectDirLabel3=建议安装到 Program Files。若要使用其他驱动器，请选择该驱动器的 Program Files 文件夹。安装程序会自动创建桌面和开始菜单快捷方式。
+chinesesimplified.ReadyMemoDir=安装文件夹：
+chinesesimplified.ReadyMemoGroup=开始菜单文件夹：
+
+[CustomMessages]
+english.LaunchSubtitleYC=Launch SubtitleYC
+chinesesimplified.LaunchSubtitleYC=启动 SubtitleYC
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\tools"
@@ -79,7 +89,11 @@ Name: "{group}\Uninstall SubtitleYC"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\SubtitleYC"; Filename: "{app}\SubtitleYC.exe"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\SubtitleYC.exe"; Description: "Launch SubtitleYC"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\SubtitleYC.exe"; Description: "{cm:LaunchSubtitleYC}"; Flags: nowait postinstall skipifsilent
+
+[Registry]
+Root: HKLM; Subkey: "Software\SubtitleYC"; ValueType: string; ValueName: "InstallerUILanguage"; ValueData: "{language}"; Flags: uninsdeletevalue
+Root: HKLM; Subkey: "Software\SubtitleYC"; ValueType: string; ValueName: "InstallerVersion"; ValueData: "{#AppVersion}"; Flags: uninsdeletevalue
 
 [Code]
 const

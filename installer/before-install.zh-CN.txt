@@ -1,0 +1,23 @@
+SubtitleYC 是用于视频字幕提取和编辑的本地 Windows 桌面应用。
+
+将安装以下内容：
+- SubtitleYC.exe 和桌面界面文件。
+- 如果使用捆绑版安装程序，tools 文件夹还会包含 VideOCR 和 FFmpeg/ffprobe。
+- 开始菜单和桌面快捷方式。请从这些快捷方式正常启动 SubtitleYC。
+
+数据存储位置：
+- 默认情况下，应用文件安装到 %ProgramFiles%\SubtitleYC。
+- 如果需要更多空间，可在下一页选择其他驱动器上的 Program Files 文件夹。
+- 请在此选择应用文件夹，而不是“下载”或“桌面”文件夹；快捷方式会自动创建。
+- 除非设置 SUBTITLEYC_DATA_DIR，否则生成的视频、预览、日志、设置和字幕结果会存储在 %LOCALAPPDATA%\SubtitleYC\workspace。
+
+常用操作：
+- 粘贴 URL 后，SubtitleYC 会自动检查可用的 yt-dlp 格式。
+- 空格键播放或暂停预览，左/右方向键逐帧移动，Shift+左/右方向键跳转字幕边界。
+- 在编辑器中按 Ctrl+S 保存字幕编辑，按 Ctrl+U 上传字幕，按 Ctrl+E 从主窗口打开 SubtitleYC 编辑器。
+
+注意：
+- 捆绑版安装程序体积较大，因为它包含真实的 VideOCR 运行环境。
+- 只下载您有权下载的视频。
+- SubtitleYC 是根据 MIT 许可证发布的开源软件。
+- MIT 许可证、隐私和安全说明以及第三方许可证文本会安装在应用旁边。

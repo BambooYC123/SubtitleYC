@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.3.0",
-    [string]$ReleaseLabel = "0.3.0",
+    [string]$Version = "0.4.0",
+    [string]$ReleaseLabel = "0.4.0",
     [Parameter(Mandatory = $true)]
     [string]$CpuVideOCRCliPath,
     [Parameter(Mandatory = $true)]

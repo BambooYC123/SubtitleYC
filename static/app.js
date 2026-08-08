@@ -282,6 +282,7 @@ const elements = {
   settingsDrawer: document.querySelector("#settingsDrawer"),
   settingsSaveButton: document.querySelector("#settingsSaveButton"),
   settingsResetButton: document.querySelector("#settingsResetButton"),
+  settingUiLanguageInput: document.querySelector("#settingUiLanguageInput"),
   settingThemeInput: document.querySelector("#settingThemeInput"),
   settingDownloadDirInput: document.querySelector("#settingDownloadDirInput"),
   settingDownloadDirButton: document.querySelector("#settingDownloadDirButton"),
@@ -987,7 +988,7 @@ function formatLibraryDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString(currentUiLanguage(), { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function renderLibraryEmpty(container, message) {
@@ -1182,6 +1183,17 @@ function currentTheme() {
   return normalizedTheme(document.documentElement.dataset.theme || state.settings?.theme || state.defaultSettings?.theme || "dark");
 }
 
+function currentUiLanguage() {
+  return window.SubtitleYCI18n?.current() || state.settings?.ui_language || state.defaultSettings?.ui_language || "en";
+}
+
+function applyUiLanguage(language) {
+  const normalized = window.SubtitleYCI18n?.set(language) || "en";
+  const setShellLanguage = window.pywebview?.api?.set_shell_language;
+  if (setShellLanguage) setShellLanguage(normalized).catch(() => {});
+  return normalized;
+}
+
 function syncShellTheme(theme = currentTheme()) {
   const normalized = normalizedTheme(theme);
   window.subtitleycPendingShellTheme = normalized;
@@ -1205,10 +1217,14 @@ function applyTheme(theme) {
   return normalized;
 }
 
-window.addEventListener("pywebviewready", () => syncShellTheme(window.subtitleycPendingShellTheme || currentTheme()));
+window.addEventListener("pywebviewready", () => {
+  syncShellTheme(window.subtitleycPendingShellTheme || currentTheme());
+  applyUiLanguage(currentUiLanguage());
+});
 function settingsFromControls() {
   return {
     theme: currentTheme(),
+    ui_language: currentUiLanguage(),
     default_download_dir: selectedDownloadDir(),
     default_language: selectedLanguage(),
     default_subtitle_format: selectedSubtitleFormat(),
@@ -1235,6 +1251,7 @@ function applySettingsToControls(settings) {
   const safe = { ...(state.defaultSettings || {}), ...(settings || {}) };
   state.settingsApplying = true;
   try {
+    applyUiLanguage(safe.ui_language || "en");
     applyTheme(safe.theme || "dark");
     elements.downloadDirInput.value = safe.default_download_dir || "";
     setSelectValue(elements.languageInput, safe.default_language, "eng+chi_sim");
@@ -1266,6 +1283,7 @@ function applySettingsToControls(settings) {
 
 function settingsFormFromSettings(settings) {
   const safe = { ...(state.defaultSettings || {}), ...(settings || {}) };
+  setSelectValue(elements.settingUiLanguageInput, safe.ui_language || "en", "en");
   setSelectValue(elements.settingThemeInput, safe.theme || "dark", "dark");
   elements.settingDownloadDirInput.value = safe.default_download_dir || "";
   setSelectValue(elements.settingLanguageInput, safe.default_language, "eng+chi_sim");
@@ -1296,6 +1314,7 @@ function settingsFormFromControls() {
 function settingsFromForm() {
   return {
     theme: normalizedTheme(elements.settingThemeInput.value),
+    ui_language: window.SubtitleYCI18n?.normalize(elements.settingUiLanguageInput.value) || "en",
     default_download_dir: elements.settingDownloadDirInput.value.trim() || null,
     default_language: elements.settingLanguageInput.value || "eng+chi_sim",
     default_subtitle_format: elements.settingSubtitleFormatInput.value || "srt",
@@ -1426,6 +1445,7 @@ function bindSettingsAutosave() {
     elements.useFullframeInput,
     elements.angleClsInput,
     elements.postProcessingInput,
+    elements.settingUiLanguageInput,
     elements.settingThemeInput,
     elements.settingDownloadDirInput,
     elements.settingLanguageInput,
@@ -1449,6 +1469,7 @@ function bindSettingsAutosave() {
   ].filter(Boolean);
 
   elements.settingThemeInput?.addEventListener("change", () => applyTheme(elements.settingThemeInput.value));
+  elements.settingUiLanguageInput?.addEventListener("change", () => applyUiLanguage(elements.settingUiLanguageInput.value));
 
   for (const control of controls) {
     control.addEventListener("change", () => scheduleSettingsAutosave());
@@ -4081,6 +4102,11 @@ elements.settingSimilarityInput.addEventListener("input", setSettingsRangeLabels
 elements.settingSsimInput.addEventListener("input", setSettingsRangeLabels);
 
 window.addEventListener("resize", resizeCanvas);
+window.addEventListener("subtitleyc-language-changed", () => {
+  renderActivities();
+  if (state.library) renderLibrary(state.library);
+  renderSubtitleEditor();
+});
 
 setupDraggableSubtitleOverlay();
 

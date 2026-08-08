@@ -169,8 +169,22 @@ function applyTheme(theme, options = {}) {
   if (options.syncShell !== false) syncShellTheme(normalized);
 }
 
+function applyUiLanguage(language, options = {}) {
+  const normalized = window.SubtitleYCI18n?.set(language, { broadcast: options.broadcast !== false }) || "en";
+  if (options.syncShell !== false) {
+    const setShellLanguage = window.pywebview?.api?.set_shell_language;
+    if (setShellLanguage) setShellLanguage(normalized).catch(() => {});
+  }
+  return normalized;
+}
+
 window.subtitleycApplyExternalTheme = (theme) => applyTheme(theme, { syncShell: false });
+window.subtitleycApplyExternalLanguage = (language) => applyUiLanguage(language, { syncShell: false, broadcast: false });
 window.addEventListener("pywebviewready", () => syncShellTheme(window.subtitleycPendingShellTheme || document.documentElement.dataset.theme || "dark"));
+window.addEventListener("subtitleyc-language-changed", () => {
+  renderCueList();
+  if (state.library) renderLibrary(state.library);
+});
 window.addEventListener("storage", (event) => {
   if (event.key === SUBTITLE_OVERLAY_POSITION_STORAGE_KEY) {
     applySubtitleOverlayPosition();
@@ -197,12 +211,14 @@ window.addEventListener("storage", (event) => {
   }
 });
 
-async function loadTheme() {
+async function loadAppearance() {
   try {
     const payload = await fetchJson("/api/settings");
     applyTheme(payload.settings?.theme || payload.defaults?.theme || "dark");
+    applyUiLanguage(payload.settings?.ui_language || payload.defaults?.ui_language || "en");
   } catch (_error) {
     applyTheme("dark");
+    applyUiLanguage("en");
   }
 }
 function fps() {
@@ -1430,7 +1446,7 @@ function formatLibraryDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleString(window.SubtitleYCI18n?.current() || "en", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function libraryRequestBody(item, extra = {}) {
@@ -1739,7 +1755,7 @@ function bindEvents() {
 async function init() {
   bindEvents();
   setupDraggableSubtitleOverlay();
-  await loadTheme();
+  await loadAppearance();
   try {
     applyStoredSubtitleFormat();
     const loadedSession = await loadSession(null, { silentNoSession: true, time: initialTime });

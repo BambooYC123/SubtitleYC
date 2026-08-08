@@ -40,6 +40,13 @@ class InstallerLayoutTests(unittest.TestCase):
         self.assertIn(r"LicenseFile=..\LICENSE", script)
         self.assertNotIn("EULA", script)
 
+    def test_installer_language_dialog_is_the_first_localized_choice(self) -> None:
+        script = INSTALLER_SCRIPT.read_text(encoding="utf-8")
+        self.assertIn("ShowLanguageDialog=yes", script)
+        self.assertIn('Name: "english"', script)
+        self.assertIn('Name: "chinesesimplified"', script)
+        self.assertIn('MessagesFile: "ChineseSimplified.isl"', script)
+
     def test_installer_keeps_numeric_and_display_versions_separate(self) -> None:
         script = INSTALLER_SCRIPT.read_text(encoding="utf-8")
         build_script = (ROOT / "scripts" / "build-installer.ps1").read_text(encoding="utf-8")
