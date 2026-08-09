@@ -1,6 +1,6 @@
 # SubtitleYC
 
-[简体中文 README](README.CN.md)
+English | [中文](README.CN.md)
 
 [README](README.md) | [Contributing](CONTRIBUTING.md) | [MIT License](LICENSE) | [Security](SECURITY.md) | [Privacy](PRIVACY.md)
 
