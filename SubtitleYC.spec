@@ -35,6 +35,7 @@ datas = [
     ("static", "static"),
     ("assets", "assets"),
     ("README.md", "."),
+    ("README.CN.md", "."),
     ("LICENSE", "."),
     ("THIRD-PARTY-NOTICES.txt", "."),
     ("licenses", "licenses"),

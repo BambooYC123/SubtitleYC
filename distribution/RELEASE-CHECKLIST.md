@@ -24,7 +24,7 @@
 
 - [ ] Publish the source repository under the MIT License.
 - [ ] Enable GitHub Issues, Discussions, and Private Vulnerability Reporting.
-- [ ] Publish `v0.4.0` from the exact tested commit.
+- [ ] Publish `v0.5.0` from the exact tested commit.
 - [ ] Upload only the CPU and CUDA 12.9 setup executables; retain checksums and the build manifest with the release records.
 - [ ] Make CPU the recommended default and explain the GPU hardware requirement.
 - [ ] Keep each GitHub release asset below 2 GiB.

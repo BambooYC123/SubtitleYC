@@ -1,6 +1,6 @@
 param(
-    [string]$AppVersion = "0.4.0",
-    [string]$ReleaseTag = "v0.4.0",
+    [string]$AppVersion = "0.5.0",
+    [string]$ReleaseTag = "v0.5.0",
     [Parameter(Mandatory = $true)]
     [string]$ArtifactsRoot,
     [Parameter(Mandatory = $true)]
@@ -32,7 +32,7 @@ if ([string]::IsNullOrWhiteSpace($MaintainerName) -or $MaintainerName -match '(?
 Assert-HttpsUrl -Name "SupportUrl" -Value $SupportUrl
 Assert-HttpsUrl -Name "RepositoryUrl" -Value $RepositoryUrl
 if ($ReleaseTag -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
-    throw "ReleaseTag must look like v0.4.0 or v0.4.0-beta.1."
+    throw "ReleaseTag must look like v0.5.0 or v0.5.0-beta.1."
 }
 $releaseLabel = $ReleaseTag.Substring(1)
 
@@ -79,7 +79,7 @@ New-Item -ItemType Directory -Path $repositoryDir, $releaseAssetsDir -Force | Ou
 $sourceInputs = @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "docs", "distribution", "licenses",
     ".gitignore", "CONTRIBUTING.md", "LICENSE", "PRIVACY.md",
-    "pyproject.toml", "README.md", "requirements-release.txt", "SECURITY.md", "Start-SubtitleYC.bat",
+    "pyproject.toml", "README.md", "README.CN.md", "requirements-release.txt", "SECURITY.md", "Start-SubtitleYC.bat",
     "SubtitleYC.spec", "THIRD-PARTY-NOTICES.txt"
 )
 foreach ($sourceInput in $sourceInputs) {

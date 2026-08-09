@@ -41,11 +41,11 @@ def authenticated_client() -> TestClient:
 
 class TestSrt(unittest.TestCase):
     def test_system_status_reports_exact_release(self):
-        self.assertEqual(__version__, "0.4.0")
-        self.assertEqual(__release__, "0.4.0")
+        self.assertEqual(__version__, "0.5.0")
+        self.assertEqual(__release__, "0.5.0")
         response = authenticated_client().get("/api/system")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["release_label"], "0.4.0")
+        self.assertEqual(response.json()["release_label"], "0.5.0")
 
     def test_download_format_limits_resolution(self):
         self.assertIn("height<=720", _download_format(720))
@@ -358,6 +358,14 @@ class TestSrt(unittest.TestCase):
 
         self.assertIn("1\n00:00:00,000 --> 00:00:01,250\nHello", srt)
         self.assertIn("2\n00:00:02,000 --> 00:00:03,000\nWorld", srt)
+
+    def test_srt_round_trip_preserves_inline_subtitle_styles(self):
+        styled = '<b>Bold</b> <i>italic</i> <u>underlined</u> <font color="#14b8a6">teal</font>'
+
+        srt = cues_to_srt([SubtitleCue(start_seconds=0, end_seconds=2, text=styled)])
+        parsed = parse_srt(srt)
+
+        self.assertEqual(parsed[0].text, styled)
 
     def test_adjust_cue_timing_snaps_then_preserves_subframe_offset(self):
         adjusted = adjust_cue_timing(

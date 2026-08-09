@@ -1,5 +1,7 @@
 # SubtitleYC
 
+[简体中文 README](README.CN.md)
+
 [README](README.md) | [Contributing](CONTRIBUTING.md) | [MIT License](LICENSE) | [Security](SECURITY.md) | [Privacy](PRIVACY.md)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -63,7 +65,7 @@ The installer keeps application files under `Program Files\SubtitleYC` by defaul
 - Run installed or bundled VideOCR CLI / PaddleOCR with advanced settings.
 - Export subtitles as SubRip `.srt`, plain `.txt`, or Advanced SubStation Alpha `.ass`.
 - Import timed subtitles from `.srt`, `.ass`, or `.ssa` into the current video session.
-- Preview, edit, add, delete, save, and download subtitle cues.
+- Preview, edit, style, add, delete, save, and download subtitle cues.
 - Nudge individual cue starts/ends by frames, shift all cues, and snap cues to the video frame grid.
 - Jump to previous/next subtitle boundaries under the video preview.
 - Separate activity rows for downloads and OCR jobs, with stop buttons for active jobs.
@@ -89,6 +91,7 @@ Supported output formats:
 Use `SubtitleYC Editor` to open the editor. From there you can:
 
 - Edit cue text, start time, and end time.
+- Apply bold, italic, underline, or text colour styling to selected text or a whole cue.
 - Add or delete cues.
 - Seek the video to a cue.
 - Nudge a cue start or end by a chosen frame amount.
@@ -116,8 +119,8 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.4.0-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.4.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.5.0-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.5.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
@@ -206,6 +209,7 @@ Subtitle editor:
 - `Left` / `Right`: previous or next frame.
 - `Shift+Left` / `Shift+Right`: previous or next subtitle boundary.
 - `Ctrl+S`: save subtitle edits.
+- `Ctrl+B` / `Ctrl+I` / `Ctrl+U`: style selected subtitle text while editing a cue.
 - `Ctrl+Z` / `Ctrl+Y`: undo or redo subtitle edits.
 - `Ctrl+U`: upload subtitles.
 - `Ctrl+R`: reload subtitles.
@@ -255,7 +259,7 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.4.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.0"
 ```
 
 The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.

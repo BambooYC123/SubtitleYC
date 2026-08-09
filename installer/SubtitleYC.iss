@@ -1,9 +1,9 @@
 #define AppName "SubtitleYC"
 #ifndef AppVersion
-#define AppVersion "0.4.0"
+#define AppVersion "0.5.0"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.4.0"
+#define AppDisplayVersion "0.5.0"
 #endif
 
 #ifndef AppEdition
@@ -16,7 +16,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.4.0-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.5.0-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"

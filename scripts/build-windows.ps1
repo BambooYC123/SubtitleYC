@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.4.0",
-    [string]$ReleaseLabel = "0.4.0",
+    [string]$Version = "0.5.0",
+    [string]$ReleaseLabel = "0.5.0",
     [switch]$BundleExternalTools,
     [switch]$SkipAppCompile,
     [switch]$SkipPortableZip,
@@ -403,6 +403,7 @@ if (Test-Path $DistWorkspace) {
     Remove-Item -LiteralPath $DistWorkspace -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $Root "README.md") -Destination (Join-Path $DistDir "README.md") -Force
+Copy-Item -LiteralPath (Join-Path $Root "README.CN.md") -Destination (Join-Path $DistDir "README.CN.md") -Force
 Copy-LicenseBundle -TargetDistDir $DistDir -PythonExecutable $Python
 
 if ($BundleExternalTools) {

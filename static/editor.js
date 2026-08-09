@@ -77,6 +77,7 @@ const state = {
   fallbackProbeTimer: 0,
   videoUploadActive: false,
   library: null,
+  textSelection: { start: 0, end: 0 },
 };
 
 const elements = {
@@ -104,6 +105,12 @@ const elements = {
   startInput: document.querySelector("#startInput"),
   endInput: document.querySelector("#endInput"),
   textInput: document.querySelector("#textInput"),
+  styleToolbar: document.querySelector("#subtitleStyleToolbar"),
+  boldStyleButton: document.querySelector("#boldStyleButton"),
+  italicStyleButton: document.querySelector("#italicStyleButton"),
+  underlineStyleButton: document.querySelector("#underlineStyleButton"),
+  textColorInput: document.querySelector("#textColorInput"),
+  clearStyleButton: document.querySelector("#clearStyleButton"),
   cueForm: document.querySelector("#cueForm"),
   applyCueButton: document.querySelector("#applyCueButton"),
   addCueButton: document.querySelector("#addCueButton"),
@@ -126,12 +133,66 @@ const elements = {
   libraryVideoList: document.querySelector("#libraryVideoList"),
   librarySubtitleList: document.querySelector("#librarySubtitleList"),
   libraryMeta: document.querySelector("#libraryMeta"),
+  editorTooltip: document.querySelector("#editorTooltip"),
+  editorTooltipText: document.querySelector("#editorTooltipText"),
+  editorTooltipShortcut: document.querySelector("#editorTooltipShortcut"),
 };
+
+let editorTooltipTarget = null;
+let editorTooltipTimer = 0;
 
 function setStatus(message, ok = true) {
   elements.status.textContent = message;
   elements.status.title = message;
   elements.status.style.color = ok ? "" : "#b42318";
+}
+
+function positionEditorTooltip(target) {
+  if (!target || elements.editorTooltip.hidden) return;
+  const targetRect = target.getBoundingClientRect();
+  const tooltipRect = elements.editorTooltip.getBoundingClientRect();
+  const margin = 8;
+  let left = targetRect.left + (targetRect.width - tooltipRect.width) / 2;
+  left = Math.max(margin, Math.min(window.innerWidth - tooltipRect.width - margin, left));
+  let top = targetRect.top - tooltipRect.height - margin;
+  if (top < margin) top = Math.min(window.innerHeight - tooltipRect.height - margin, targetRect.bottom + margin);
+  elements.editorTooltip.style.left = `${Math.round(left)}px`;
+  elements.editorTooltip.style.top = `${Math.round(top)}px`;
+}
+
+function showEditorTooltip(target) {
+  if (!target?.dataset?.editorTooltip) return;
+  editorTooltipTarget = target;
+  elements.editorTooltipText.textContent = window.SubtitleYCI18n?.t(target.dataset.editorTooltip) || target.dataset.editorTooltip;
+  const shortcut = String(target.dataset.shortcut || "").trim();
+  elements.editorTooltipShortcut.textContent = shortcut;
+  elements.editorTooltipShortcut.hidden = !shortcut;
+  elements.editorTooltip.hidden = false;
+  requestAnimationFrame(() => positionEditorTooltip(target));
+}
+
+function scheduleEditorTooltip(target, delay = 260) {
+  window.clearTimeout(editorTooltipTimer);
+  editorTooltipTarget = target;
+  editorTooltipTimer = window.setTimeout(() => showEditorTooltip(target), delay);
+}
+
+function hideEditorTooltip(target = null) {
+  if (target && target !== editorTooltipTarget) return;
+  window.clearTimeout(editorTooltipTimer);
+  editorTooltipTimer = 0;
+  editorTooltipTarget = null;
+  elements.editorTooltip.hidden = true;
+}
+
+function setupEditorTooltips() {
+  for (const target of document.querySelectorAll("[data-editor-tooltip]")) {
+    target.addEventListener("pointerenter", () => scheduleEditorTooltip(target));
+    target.addEventListener("pointerleave", () => hideEditorTooltip(target));
+    target.addEventListener("focus", () => scheduleEditorTooltip(target, 0));
+    target.addEventListener("blur", () => hideEditorTooltip(target));
+    target.addEventListener("pointerdown", () => hideEditorTooltip(target));
+  }
 }
 
 async function fetchJson(url, options = {}) {
@@ -182,6 +243,7 @@ window.subtitleycApplyExternalTheme = (theme) => applyTheme(theme, { syncShell: 
 window.subtitleycApplyExternalLanguage = (language) => applyUiLanguage(language, { syncShell: false, broadcast: false });
 window.addEventListener("pywebviewready", () => syncShellTheme(window.subtitleycPendingShellTheme || document.documentElement.dataset.theme || "dark"));
 window.addEventListener("subtitleyc-language-changed", () => {
+  hideEditorTooltip();
   renderCueList();
   if (state.library) renderLibrary(state.library);
 });
@@ -336,6 +398,78 @@ function activeSubtitleText() {
   return cue?.text?.trim() || "";
 }
 
+function normalizedSubtitleColor(value) {
+  const candidate = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(candidate)) return candidate.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(candidate)) {
+    return `#${candidate.slice(1).split("").map((part) => part + part).join("")}`.toLowerCase();
+  }
+  return null;
+}
+
+function subtitleMarkupRuns(markup) {
+  const source = String(markup || "");
+  const runs = [];
+  const style = { bold: 0, italic: 0, underline: 0, colors: [] };
+  const tagPattern = /<\s*(\/?)\s*(b|strong|i|em|u|font)\b([^>]*)>/gi;
+  let cursor = 0;
+
+  const append = (text) => {
+    if (!text) return;
+    const run = {
+      text,
+      bold: style.bold > 0,
+      italic: style.italic > 0,
+      underline: style.underline > 0,
+      color: style.colors.at(-1) || null,
+    };
+    const previous = runs.at(-1);
+    if (previous && previous.bold === run.bold && previous.italic === run.italic && previous.underline === run.underline && previous.color === run.color) {
+      previous.text += text;
+    } else {
+      runs.push(run);
+    }
+  };
+
+  for (const match of source.matchAll(tagPattern)) {
+    append(source.slice(cursor, match.index));
+    cursor = Number(match.index) + match[0].length;
+    const closing = Boolean(match[1]);
+    const tag = match[2].toLowerCase();
+    if (tag === "b" || tag === "strong") style.bold = Math.max(0, style.bold + (closing ? -1 : 1));
+    else if (tag === "i" || tag === "em") style.italic = Math.max(0, style.italic + (closing ? -1 : 1));
+    else if (tag === "u") style.underline = Math.max(0, style.underline + (closing ? -1 : 1));
+    else if (tag === "font") {
+      if (closing) {
+        style.colors.pop();
+      } else {
+        const colorMatch = match[3].match(/\bcolor\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i);
+        style.colors.push(normalizedSubtitleColor(colorMatch?.[1] || colorMatch?.[2] || colorMatch?.[3]) || style.colors.at(-1) || null);
+      }
+    }
+  }
+  append(source.slice(cursor));
+  return runs;
+}
+
+function subtitlePlainText(markup) {
+  return subtitleMarkupRuns(markup).map((run) => run.text).join("");
+}
+
+function renderSubtitleMarkup(target, markup) {
+  target.replaceChildren();
+  for (const run of subtitleMarkupRuns(markup)) {
+    const span = document.createElement("span");
+    span.className = "subtitle-run";
+    span.classList.toggle("is-bold", run.bold);
+    span.classList.toggle("is-italic", run.italic);
+    span.classList.toggle("is-underlined", run.underline);
+    if (run.color) span.style.color = run.color;
+    span.textContent = run.text;
+    target.appendChild(span);
+  }
+}
+
 function clampSubtitleOverlayValue(value, min, max) {
   if (!Number.isFinite(value)) return min;
   return Math.max(min, Math.min(max, value));
@@ -469,6 +603,7 @@ function nativePreviewPayload() {
     crop: null,
     show_crop: false,
     subtitle_text: activeSubtitleText(),
+    subtitle_runs: subtitleMarkupRuns(activeSubtitleText()),
     subtitle_box: subtitleOverlayPositionPayload(),
     occluders: nativePreviewOccluders(),
   };
@@ -886,7 +1021,7 @@ function renderCueList() {
     time.textContent = `${formatTime(cue.start_seconds)} -> ${formatTime(cue.end_seconds)}`;
     const text = document.createElement("span");
     text.className = "cue-text";
-    text.textContent = cue.text.trim() || "Empty subtitle";
+    text.textContent = subtitlePlainText(cue.text).trim() || "Empty subtitle";
     main.append(time, text);
     row.append(number, main);
     row.addEventListener("click", () => selectCue(index, { seek: true }));
@@ -915,11 +1050,16 @@ function updateFormState() {
   elements.startInput.disabled = !hasCue;
   elements.endInput.disabled = !hasCue;
   elements.textInput.disabled = !hasCue;
+  for (const control of [elements.boldStyleButton, elements.italicStyleButton, elements.underlineStyleButton, elements.textColorInput, elements.clearStyleButton]) {
+    if (control) control.disabled = !hasCue;
+  }
   if (!hasCue) {
     elements.startInput.value = "";
     elements.endInput.value = "";
     elements.textInput.value = "";
+    state.textSelection = { start: 0, end: 0 };
   }
+  updateStyleButtonState();
 }
 
 function selectCue(index, options = {}) {
@@ -933,6 +1073,7 @@ function selectCue(index, options = {}) {
   elements.startInput.value = cue.start_seconds.toFixed(3);
   elements.endInput.value = cue.end_seconds.toFixed(3);
   elements.textInput.value = cue.text;
+  state.textSelection = { start: 0, end: cue.text.length };
   if (options.seek) {
     seekTo(cue.start_seconds);
   } else {
@@ -976,7 +1117,7 @@ function updatePreview() {
     elements.timeIndicator.textContent = "Frame: 0 / 0 | Time: 00:00.000 / 00:00.000";
     elements.seekSlider.value = "0";
     elements.seekSlider.max = "0";
-    elements.subtitleOverlay.textContent = "";
+    elements.subtitleOverlay.replaceChildren();
     elements.subtitleOverlay.hidden = true;
     updateTransportState();
     updateCueRowStates({ scroll: false });
@@ -997,11 +1138,11 @@ function updatePreview() {
   state.activeIndex = index;
   const subtitleText = cue?.text?.trim() || "";
   if (subtitleText && !state.useNativePreview) {
-    elements.subtitleOverlay.textContent = subtitleText;
+    renderSubtitleMarkup(elements.subtitleOverlay, subtitleText);
     elements.subtitleOverlay.hidden = false;
     applySubtitleOverlayPosition();
   } else {
-    elements.subtitleOverlay.textContent = "";
+    elements.subtitleOverlay.replaceChildren();
     elements.subtitleOverlay.hidden = true;
   }
   updateTransportState();
@@ -1028,6 +1169,126 @@ function applyCueForm(options = {}) {
   renderCueList();
   updatePreview();
   if (!options.silent) setStatus("Cue updated");
+  return true;
+}
+
+function rememberTextSelection() {
+  if (!elements.textInput || elements.textInput.disabled) return;
+  state.textSelection = {
+    start: Number(elements.textInput.selectionStart || 0),
+    end: Number(elements.textInput.selectionEnd || 0),
+  };
+  updateStyleButtonState();
+}
+
+function activeTextRange() {
+  const length = elements.textInput.value.length;
+  const storedStart = Number(state.textSelection?.start || 0);
+  const storedEnd = Number(state.textSelection?.end || storedStart);
+  const start = Math.max(0, Math.min(length, storedStart));
+  const end = Math.max(start, Math.min(length, storedEnd));
+  if (start === end && length) return { start: 0, end: length };
+  return { start, end };
+}
+
+function selectionHasStyle(openTag, closeTag) {
+  if (elements.textInput.disabled) return false;
+  const value = elements.textInput.value;
+  const { start, end } = activeTextRange();
+  const selected = value.slice(start, end);
+  return (selected.startsWith(openTag) && selected.endsWith(closeTag)) ||
+    (value.slice(Math.max(0, start - openTag.length), start) === openTag && value.slice(end, end + closeTag.length) === closeTag);
+}
+
+function updateStyleButtonState() {
+  elements.boldStyleButton?.setAttribute("aria-pressed", selectionHasStyle("<b>", "</b>") ? "true" : "false");
+  elements.italicStyleButton?.setAttribute("aria-pressed", selectionHasStyle("<i>", "</i>") ? "true" : "false");
+  elements.underlineStyleButton?.setAttribute("aria-pressed", selectionHasStyle("<u>", "</u>") ? "true" : "false");
+}
+
+function commitStyledText(selectionStart, selectionEnd) {
+  elements.textInput.focus();
+  elements.textInput.setSelectionRange(selectionStart, selectionEnd);
+  rememberTextSelection();
+  applyCueForm({ silent: true });
+}
+
+function toggleSelectedTextStyle(openTag, closeTag) {
+  if (elements.textInput.disabled) return;
+  const value = elements.textInput.value;
+  const { start, end } = activeTextRange();
+  const selected = value.slice(start, end);
+  let nextValue;
+  let nextStart;
+  let nextEnd;
+
+  if (selected.startsWith(openTag) && selected.endsWith(closeTag)) {
+    const inner = selected.slice(openTag.length, selected.length - closeTag.length);
+    nextValue = value.slice(0, start) + inner + value.slice(end);
+    nextStart = start;
+    nextEnd = start + inner.length;
+  } else if (value.slice(Math.max(0, start - openTag.length), start) === openTag && value.slice(end, end + closeTag.length) === closeTag) {
+    nextValue = value.slice(0, start - openTag.length) + selected + value.slice(end + closeTag.length);
+    nextStart = start - openTag.length;
+    nextEnd = nextStart + selected.length;
+  } else {
+    nextValue = value.slice(0, start) + openTag + selected + closeTag + value.slice(end);
+    nextStart = start + openTag.length;
+    nextEnd = nextStart + selected.length;
+  }
+
+  elements.textInput.value = nextValue;
+  commitStyledText(nextStart, nextEnd);
+}
+
+function colorSelectedText(color) {
+  const normalized = normalizedSubtitleColor(color);
+  if (!normalized || elements.textInput.disabled) return;
+  const { start, end } = activeTextRange();
+  const value = elements.textInput.value;
+  const selected = value.slice(start, end);
+  const openTag = `<font color="${normalized}">`;
+  elements.textInput.value = value.slice(0, start) + openTag + selected + "</font>" + value.slice(end);
+  commitStyledText(start + openTag.length, start + openTag.length + selected.length);
+}
+
+function clearSelectedTextStyle() {
+  if (elements.textInput.disabled) return;
+  const { start, end } = activeTextRange();
+  const value = elements.textInput.value;
+  const selected = value.slice(start, end);
+  const plain = subtitlePlainText(selected);
+  let prefix = value.slice(0, start);
+  let suffix = value.slice(end);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [openTag, closeTag] of [["<b>", "</b>"], ["<i>", "</i>"], ["<u>", "</u>"]]) {
+      if (prefix.endsWith(openTag) && suffix.startsWith(closeTag)) {
+        prefix = prefix.slice(0, -openTag.length);
+        suffix = suffix.slice(closeTag.length);
+        changed = true;
+      }
+    }
+    const fontOpen = prefix.match(/<font\b[^>]*>$/i)?.[0];
+    if (fontOpen && /^<\/font\s*>/i.test(suffix)) {
+      prefix = prefix.slice(0, -fontOpen.length);
+      suffix = suffix.replace(/^<\/font\s*>/i, "");
+      changed = true;
+    }
+  }
+  elements.textInput.value = prefix + plain + suffix;
+  commitStyledText(prefix.length, prefix.length + plain.length);
+}
+
+function handleSubtitleStyleShortcut(event) {
+  if (event.target !== elements.textInput || !(event.ctrlKey || event.metaKey) || event.altKey) return false;
+  const tags = { b: ["<b>", "</b>"], i: ["<i>", "</i>"], u: ["<u>", "</u>"] };
+  const tag = tags[event.key.toLowerCase()];
+  if (!tag) return false;
+  event.preventDefault();
+  rememberTextSelection();
+  toggleSelectedTextStyle(tag[0], tag[1]);
   return true;
 }
 
@@ -1687,6 +1948,28 @@ function bindEvents() {
   elements.visibleEndBackButton.addEventListener("click", () => nudgeVisible("end", -frameStepFrames()));
   elements.visibleEndForwardButton.addEventListener("click", () => nudgeVisible("end", frameStepFrames()));
 
+  for (const [button, openTag, closeTag] of [
+    [elements.boldStyleButton, "<b>", "</b>"],
+    [elements.italicStyleButton, "<i>", "</i>"],
+    [elements.underlineStyleButton, "<u>", "</u>"],
+  ]) {
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      rememberTextSelection();
+    });
+    button.addEventListener("click", () => toggleSelectedTextStyle(openTag, closeTag));
+  }
+  elements.clearStyleButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    rememberTextSelection();
+  });
+  elements.clearStyleButton.addEventListener("click", clearSelectedTextStyle);
+  elements.textColorInput.addEventListener("pointerdown", rememberTextSelection);
+  elements.textColorInput.addEventListener("change", () => colorSelectedText(elements.textColorInput.value));
+  for (const eventName of ["select", "keyup", "mouseup", "focus", "input"]) {
+    elements.textInput.addEventListener(eventName, rememberTextSelection);
+  }
+
   elements.cueForm.addEventListener("submit", (event) => {
     event.preventDefault();
     saveCues().catch((error) => setStatus(error.message || "Save failed", false));
@@ -1729,12 +2012,17 @@ function bindEvents() {
     requestNativePreviewSurfaceSync();
   });
   window.addEventListener("resize", () => {
+    hideEditorTooltip();
     applySubtitleOverlayPosition();
     requestNativePreviewSurfaceSync();
   });
   window.addEventListener("pointerup", finishPreviewScrub);
-  window.addEventListener("scroll", requestNativePreviewSurfaceSync, true);
+  window.addEventListener("scroll", () => {
+    hideEditorTooltip();
+    requestNativePreviewSurfaceSync();
+  }, true);
   window.addEventListener("keydown", (event) => {
+    if (handleSubtitleStyleShortcut(event)) return;
     if (shouldUseHistoryShortcut(event)) {
       event.preventDefault();
       const key = event.key.toLowerCase();
@@ -1754,6 +2042,7 @@ function bindEvents() {
 
 async function init() {
   bindEvents();
+  setupEditorTooltips();
   setupDraggableSubtitleOverlay();
   await loadAppearance();
   try {

@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.4.0",
-    [string]$ReleaseLabel = "0.4.0",
+    [string]$Version = "0.5.0",
+    [string]$ReleaseLabel = "0.5.0",
     [switch]$BundleExternalTools,
     [switch]$SkipAppBuild,
     [switch]$SkipPortableZip,
@@ -156,7 +156,7 @@ if (-not (Test-Path (Join-Path $DistDir "SubtitleYC.exe"))) {
     throw "dist\SubtitleYC\SubtitleYC.exe was not found. Run scripts\build-windows.ps1 first, or omit -SkipAppBuild."
 }
 
-foreach ($releaseDocument in @("README.md", "LICENSE", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt")) {
+foreach ($releaseDocument in @("README.md", "README.CN.md", "LICENSE", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt")) {
     $releaseDocumentPath = Join-Path $Root $releaseDocument
     if (-not (Test-Path -LiteralPath $releaseDocumentPath -PathType Leaf)) {
         throw "Required release document was not found: $releaseDocument"

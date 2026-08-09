@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.4.0",
-    [string]$ReleaseLabel = "0.4.0",
+    [string]$Version = "0.5.0",
+    [string]$ReleaseLabel = "0.5.0",
     [Parameter(Mandatory = $true)]
     [string]$CpuVideOCRCliPath,
     [Parameter(Mandatory = $true)]
@@ -142,7 +142,7 @@ Build-Edition -Variant "GPU-CUDA-12.9" -VideOCRCliPath $GpuCuda129VideOCRCliPath
 $sourceFiles = @()
 foreach ($sourceInput in @(
     "subtitleyc", "static", "scripts", "installer", "tests", "assets", "distribution",
-    "pyproject.toml", "requirements-release.txt", "SubtitleYC.spec", "README.md",
+    "pyproject.toml", "requirements-release.txt", "SubtitleYC.spec", "README.md", "README.CN.md",
     "LICENSE", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md", "THIRD-PARTY-NOTICES.txt",
     ".gitignore", "Start-SubtitleYC.bat"
 )) {

@@ -1,8 +1,11 @@
 
 from __future__ import annotations
 
+import html
 import json
+import math
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -10,8 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from PIL import Image
-from PySide6.QtCore import QObject, QEvent, QPoint, QRect, Qt, QTimer, QUrl, Signal, Slot
-from PySide6.QtGui import QColor, QCursor, QDesktopServices, QFont, QIcon, QImage, QPainter, QPalette, QPen, QPixmap, QRegion
+from PySide6.QtCore import QObject, QEvent, QPoint, QPointF, QRect, QRectF, Qt, QTimer, QUrl, Signal, Slot
+from PySide6.QtGui import QColor, QCursor, QDesktopServices, QFont, QIcon, QImage, QPainter, QPalette, QPen, QPixmap, QRegion, QTextDocument, QTextOption
 from PySide6.QtWebChannel import QWebChannel
 from PySide6.QtWebEngineCore import (
     QWebEnginePage,
@@ -206,6 +209,7 @@ class NativePreviewSurface(QWidget):
         self.crop: dict[str, int] | None = None
         self.show_crop = True
         self.subtitle_text = ""
+        self.subtitle_runs: list[dict[str, Any]] = []
         self.subtitle_box: dict[str, float] | None = None
         self.subtitle_box_rect = QRect()
         self.subtitle_drag_offset: tuple[int, int] | None = None
@@ -297,6 +301,8 @@ class NativePreviewSurface(QWidget):
         self.crop = self._clamp_crop(crop) if isinstance(crop, dict) else self.crop
         self.show_crop = bool(payload.get("show_crop", True))
         self.subtitle_text = str(payload.get("subtitle_text") or "")
+        raw_runs = payload.get("subtitle_runs")
+        self.subtitle_runs = [dict(run) for run in raw_runs if isinstance(run, dict)] if isinstance(raw_runs, list) else []
         self.subtitle_box = self._normalized_subtitle_box(payload.get("subtitle_box"))
         next_frame_index = self.decoder.frame_index_for_time(float(payload.get("time_seconds") or 0.0))
         frame_changed = next_frame_index != self.frame_index
@@ -481,34 +487,58 @@ class NativePreviewSurface(QWidget):
         for line in lines:
             wrapped.extend(self._wrap_subtitle_line(line, metrics, max_width))
         return wrapped or lines
+
+    def _subtitle_rich_html(self) -> str:
+        runs = self.subtitle_runs or [{"text": self.subtitle_text}]
+        fragments: list[str] = []
+        for run in runs:
+            text = html.escape(str(run.get("text") or "")).replace("\n", "<br>")
+            if not text:
+                continue
+            styles = ["color: #ffffff"]
+            if bool(run.get("bold")):
+                styles.append("font-weight: 900")
+            if bool(run.get("italic")):
+                styles.append("font-style: italic")
+            if bool(run.get("underline")):
+                styles.append("text-decoration: underline")
+            color = str(run.get("color") or "").strip()
+            if re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                styles[0] = f"color: {color.lower()}"
+            fragments.append(f'<span style="{"; ".join(styles)}">{text}</span>')
+        return "".join(fragments)
+
     def _draw_subtitle(self, painter: QPainter) -> None:
         text = self.subtitle_text.strip()
         if not text:
             self.subtitle_box_rect = QRect()
             return
-        lines = [line.strip() for line in text.splitlines() if line.strip()] or [text]
-        font = QFont("Arial", max(14, self.width() // 44), QFont.Weight.Bold)
-        painter.setFont(font)
-        metrics = painter.fontMetrics()
-        line_height = metrics.height()
-        line_gap = 4
+
         image_width = max(1, self.image_rect.width() if not self.image_rect.isEmpty() else self.width())
         max_line_width = max(20, image_width - 52)
-        lines = self._wrap_subtitle_lines(lines, metrics, max_line_width)
-        total_text_height = len(lines) * line_height + max(0, len(lines) - 1) * line_gap
-        max_text_width = max(metrics.horizontalAdvance(line) for line in lines)
-        box_width = min(max(1, image_width - 24), max_text_width + 28)
-        box_height = total_text_height + 10
+
+        document = QTextDocument()
+        document.setDocumentMargin(0)
+        document.setDefaultFont(QFont("Arial", max(14, self.width() // 44), QFont.Weight.Bold))
+        text_option = document.defaultTextOption()
+        text_option.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        text_option.setWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+        document.setDefaultTextOption(text_option)
+        document.setHtml(self._subtitle_rich_html())
+        document.setTextWidth(max_line_width)
+        text_width = min(max_line_width, max(1, math.ceil(document.idealWidth())))
+        document.setTextWidth(text_width)
+        text_height = max(1, math.ceil(document.size().height()))
+
+        box_width = min(max(1, image_width - 24), text_width + 28)
+        box_height = text_height + 10
         box = self._subtitle_rect_for_size(box_width, box_height)
         self.subtitle_box_rect = box
         painter.fillRect(box, QColor(0, 0, 0, 150))
-        y = box.y() + 5
-        painter.setPen(QColor("#ffffff"))
-        for line in lines:
-            text_width = metrics.horizontalAdvance(line)
-            x = box.x() + max(0, (box.width() - text_width) // 2)
-            painter.drawText(x, y + metrics.ascent(), line)
-            y += line_height + line_gap
+        painter.save()
+        painter.translate(QPointF(box.x() + 14, box.y() + 5))
+        document.drawContents(painter, QRectF(0, 0, text_width, text_height))
+        painter.restore()
 
     def _crop_to_widget(self, crop: dict[str, int]) -> QRect:
         source_w, source_h = self._source_size()

@@ -8,7 +8,7 @@ access through the app.
 
 ## Short Version
 
-SubtitleYC 0.4.0 does not include accounts, advertising, analytics,
+SubtitleYC 0.5.0 does not include accounts, advertising, analytics,
 telemetry, a licence server, or automatic crash-report uploads. Videos,
 subtitles, settings, and logs are processed and stored on the user's computer.
 Nothing is sent to the SubtitleYC maintainers unless the user chooses to submit
