@@ -120,8 +120,8 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 请选择包含适合你电脑的 OCR 运行环境的安装程序：
 
-- `SubtitleYC-0.5.0-windows-cpu-setup.exe`：推荐所有 Windows 用户默认使用。
-- `SubtitleYC-0.5.0-windows-gpu-cuda-12.9-setup.exe`：适用于 Nvidia GTX 16 至 RTX 50 系列。
+- `SubtitleYC-0.5.1-windows-cpu-setup.exe`：推荐所有 Windows 用户默认使用。
+- `SubtitleYC-0.5.1-windows-gpu-cuda-12.9-setup.exe`：适用于 Nvidia GTX 16 至 RTX 50 系列。
 
 每个捆绑安装程序只包含一个 VideOCR 运行环境。安装其他版本时会升级同一份 SubtitleYC 安装并替换原有 OCR 运行环境，避免重复占用数 GB 空间。GPU 版首次运行时会启用 GPU 加速；CPU 版则保持不可用。
 
@@ -253,7 +253,7 @@ workspace\settings.json
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.1"
 ```
 
 该矩阵要求两个版本使用相同的 VideOCR 版本号。它只编译一次 SubtitleYC，然后为每个安装程序替换捆绑的 OCR 运行环境。使用 `-ArtifactsRoot` 可以将体积较大的 `build`、`dist` 和 `release` 目录放到空间充足的驱动器；省略时则使用仓库目录。脚本会生成 CPU 和 CUDA 12.9 安装程序、本地 SHA-256 校验文件，以及将两个安装程序关联到同一次源代码构建的清单。公开 GitHub Release 只包含两个安装程序；请将校验文件和清单保留在发布记录中。若要在不移除编解码器的情况下减小软件包，请传入 FFmpeg 完整共享构建中的匹配 `ffmpeg.exe` 和 `ffprobe.exe` 路径；相邻的必要 DLL 会自动打包。当前 VideOCR 软件包请参阅 [VideOCR 发布页面](https://github.com/timminator/VideOCR/releases/latest)。

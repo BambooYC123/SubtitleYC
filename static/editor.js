@@ -2,7 +2,7 @@ const params = new URLSearchParams(window.location.search);
 let sessionId = params.get("session") || params.get("session_id") || "";
 let initialTime = Number(params.get("time") || params.get("time_seconds") || 0);
 const PREVIEW_PLAYBACK_FPS = 8;
-const PREVIEW_SCRUB_SYNC_MS = 80;
+const PREVIEW_SCRUB_SYNC_MS = 50;
 const CUE_BOUNDARY_EPSILON_SECONDS = 0.000001;
 const EDITOR_SUBTITLE_FORMAT = "srt";
 const SUBTITLE_OVERLAY_POSITION_STORAGE_KEY = "subtitleyc:subtitle-overlay-position";
@@ -73,6 +73,8 @@ const state = {
   previewScrubPending: false,
   previewScrubLastSyncAt: 0,
   previewScrubUiFrame: null,
+  nativePreviewSyncInFlight: false,
+  nativePreviewPendingPayload: null,
   previewTimer: null,
   fallbackProbeTimer: 0,
   videoUploadActive: false,
@@ -609,21 +611,53 @@ function nativePreviewPayload() {
   };
 }
 
+function handleNativePreviewSyncError(error) {
+  state.nativePreviewPendingPayload = null;
+  setNativePreviewEnabled(false);
+  if (state.nativePreviewReady) setStatus(error.message || "Native preview failed", false);
+}
+
+function sendNativePreviewPayload(api, payload) {
+  state.nativePreviewSyncInFlight = true;
+  let request;
+  try {
+    request = api(payload);
+  } catch (error) {
+    state.nativePreviewSyncInFlight = false;
+    handleNativePreviewSyncError(error);
+    return false;
+  }
+  Promise.resolve(request)
+    .catch(handleNativePreviewSyncError)
+    .finally(() => {
+      state.nativePreviewSyncInFlight = false;
+      const pendingPayload = state.nativePreviewPendingPayload;
+      state.nativePreviewPendingPayload = null;
+      const nextApi = nativePreviewApi();
+      if (pendingPayload && nextApi && state.session) {
+        sendNativePreviewPayload(nextApi, pendingPayload);
+      }
+    });
+  return true;
+}
+
 function syncNativePreviewSurface() {
   const api = nativePreviewApi();
   if (!api) return false;
   if (!state.session) {
+    state.nativePreviewPendingPayload = null;
     setNativePreviewVisible(false);
     return true;
   }
   const rect = elements.videoFrame.getBoundingClientRect();
   if (rect.width <= 1 || rect.height <= 1) return true;
   setNativePreviewEnabled(true);
-  api(nativePreviewPayload()).catch((error) => {
-    setNativePreviewEnabled(false);
-    if (state.nativePreviewReady) setStatus(error.message || "Native preview failed", false);
-  });
-  return true;
+  const payload = nativePreviewPayload();
+  if (state.nativePreviewSyncInFlight) {
+    state.nativePreviewPendingPayload = payload;
+    return true;
+  }
+  return sendNativePreviewPayload(api, payload);
 }
 
 function requestNativePreviewSurfaceSync() {

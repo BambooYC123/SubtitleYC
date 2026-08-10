@@ -17,7 +17,7 @@ class LocalizationTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         chinese_readme = (ROOT / "README.CN.md").read_text(encoding="utf-8")
 
-        self.assertLess(readme.index("[简体中文 README](README.CN.md)"), readme.index("[README](README.md) |"))
+        self.assertLess(readme.index("English | [中文](README.CN.md)"), readme.index("[README](README.md) |"))
         self.assertIn("[English README](README.md)", chinese_readme)
         for heading in ("## 下载", "## 主要功能", "## 字幕工作流程", "## 键盘快捷键", "## 安全", "## 许可证"):
             self.assertIn(heading, chinese_readme)
@@ -70,6 +70,23 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("setupEditorTooltips", editor_js)
         self.assertIn("subtitle_runs", editor_js)
         self.assertIn("QTextDocument", native_preview)
+
+    def test_editor_preview_expands_for_widescreen_video(self) -> None:
+        editor_css = (ROOT / "static" / "editor.css").read_text(encoding="utf-8")
+
+        self.assertIn("width: min(1920px, calc(100vw - 28px));", editor_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) minmax(350px, 400px);", editor_css)
+        self.assertIn("aspect-ratio: 16 / 9;", editor_css)
+        self.assertIn("flex: 1 1 auto;", editor_css)
+        self.assertNotIn("height: clamp(240px, 42vh, 430px);", editor_css)
+
+    def test_editor_coalesces_native_preview_scrubbing(self) -> None:
+        editor_js = (ROOT / "static" / "editor.js").read_text(encoding="utf-8")
+
+        self.assertIn("const PREVIEW_SCRUB_SYNC_MS = 50;", editor_js)
+        self.assertIn("nativePreviewSyncInFlight", editor_js)
+        self.assertIn("nativePreviewPendingPayload", editor_js)
+        self.assertIn("sendNativePreviewPayload", editor_js)
 
     def test_simplified_chinese_covers_main_editor_and_dynamic_states(self) -> None:
         source = (ROOT / "static" / "i18n.js").read_text(encoding="utf-8")

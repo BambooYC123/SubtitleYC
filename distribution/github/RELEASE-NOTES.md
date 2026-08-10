@@ -1,4 +1,4 @@
-# SubtitleYC v0.5.0
+# SubtitleYC v0.5.1
 
 SubtitleYC is a free and open-source Windows app for extracting, reviewing,
 and editing frame-timed subtitles from video.
@@ -6,25 +6,10 @@ and editing frame-timed subtitles from video.
 SubtitleYC is distributed under the MIT License. Bundled third-party tools
 retain their own licences, which are included with the installation.
 
-## Highlights
+## Changes
 
-- Local video and URL workflows in one desktop app.
-- Native PyAV frame preview with crop selection and subtitle overlay.
-- CPU and Nvidia GPU VideOCR editions.
-- 31 alphabetically listed OCR language choices, including common Asian languages.
-- Correct Simplified and Traditional Chinese VideOCR language mapping.
-- Subtitle import, cue timing edits, undo/redo, and SRT export.
-- Bold, italic, underline, and colour styling for selected subtitle text or whole cues.
-- Safe styled-subtitle rendering in both browser and native desktop previews.
-- Editor shortcut tooltips for formatting, playback, navigation, save, reload, undo/redo, and deletion.
-- yt-dlp format and site-subtitle discovery.
-- Project library, storage controls, activity rows, local logs, and crash logs.
-- Dark and light themes with persisted settings.
-- English and Simplified Chinese app interfaces.
-- Static self-identifying language choices (`English` and `中文`) in the app and installer.
-- A complete Simplified Chinese README linked from the main project README.
-- English or Simplified Chinese can be selected on the installer's first screen.
-- The installer language becomes the app language on first launch and can be changed later in Settings.
+- Smoother Subtitle Editor timeline scrubbing. Native preview requests are now coalesced so stale frame decodes cannot queue behind the latest slider position.
+- A larger Subtitle Editor video preview. The 16:9 preview now uses more horizontal room and expands into the previously unused space below it.
 
 ## Choose an Installer
 
@@ -48,7 +33,7 @@ GitHub displays a SHA-256 digest beside each installer asset. To calculate the
 digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.5.0-windows-cpu-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.5.1-windows-cpu-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the digest shown on the release page before installation.

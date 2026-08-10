@@ -155,7 +155,7 @@ button {
   letter-spacing: 0 !important;
 }
 .editor-shell {
-  width: min(1600px, calc(100vw - 28px));
+  width: min(1920px, calc(100vw - 28px));
   height: 100%;
   min-height: 0;
   margin: 0 auto;
@@ -266,7 +266,7 @@ h1 {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+  grid-template-columns: minmax(0, 1fr) minmax(350px, 400px);
   align-items: start;
   gap: 12px;
 }
@@ -284,6 +284,7 @@ h1 {
 }
 
 .video-pane {
+  height: 100%;
   overflow: hidden;
 }
 
@@ -306,9 +307,11 @@ h1 {
 
 .video-frame {
   position: relative;
-  height: clamp(240px, 42vh, 430px);
-  min-height: 0;
-  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: min(320px, 42vh);
+  aspect-ratio: 16 / 9;
+  flex: 1 1 auto;
   border: 1px solid var(--line);
   background: var(--video-bg);
   overflow: hidden;
@@ -780,6 +783,8 @@ h1 {
 
   .video-frame {
     height: min(34vh, 320px);
+    min-height: min(240px, 34vh);
+    flex: 0 0 auto;
   }
 
   .cue-pane {

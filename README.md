@@ -119,8 +119,8 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.5.0-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.5.0-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.5.1-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.5.1-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
@@ -259,7 +259,7 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.1"
 ```
 
 The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.

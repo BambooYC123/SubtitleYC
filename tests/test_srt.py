@@ -41,11 +41,11 @@ def authenticated_client() -> TestClient:
 
 class TestSrt(unittest.TestCase):
     def test_system_status_reports_exact_release(self):
-        self.assertEqual(__version__, "0.5.0")
-        self.assertEqual(__release__, "0.5.0")
+        self.assertEqual(__version__, "0.5.1")
+        self.assertEqual(__release__, "0.5.1")
         response = authenticated_client().get("/api/system")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["release_label"], "0.5.0")
+        self.assertEqual(response.json()["release_label"], "0.5.1")
 
     def test_download_format_limits_resolution(self):
         self.assertIn("height<=720", _download_format(720))
