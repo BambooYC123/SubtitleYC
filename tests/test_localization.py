@@ -63,13 +63,29 @@ class LocalizationTests(unittest.TestCase):
         for control_id in ("boldStyleButton", "italicStyleButton", "underlineStyleButton", "textColorInput", "clearStyleButton"):
             self.assertIn(f'id="{control_id}"', editor_html)
         self.assertIn('id="editorTooltip"', editor_html)
-        for shortcut in ("Ctrl+B", "Ctrl+I", "Ctrl+U", "Ctrl+S", "Ctrl+O", "Ctrl+R", "Space", "Left Arrow", "Right Arrow", "Delete"):
+        for shortcut in ("Ctrl+B", "Ctrl+I", "Ctrl+U", "Ctrl+S", "Ctrl+L", "Ctrl+R", "Space", "Left Arrow", "Right Arrow", "Delete"):
             self.assertIn(f'data-shortcut="{shortcut}"', editor_html)
         self.assertNotIn('title="Bold (Ctrl+B)"', editor_html)
         self.assertIn("subtitleMarkupRuns", editor_js)
         self.assertIn("setupEditorTooltips", editor_js)
         self.assertIn("subtitle_runs", editor_js)
         self.assertIn("QTextDocument", native_preview)
+
+    def test_preview_media_can_be_detached_without_deleting_project_files(self) -> None:
+        main_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        editor_html = (ROOT / "static" / "editor.html").read_text(encoding="utf-8")
+        main_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+        editor_js = (ROOT / "static" / "editor.js").read_text(encoding="utf-8")
+
+        for control_id in ("removeSubtitlesButton", "removeVideoButton", "copySystemInfoButton"):
+            self.assertIn(f'id="{control_id}"', main_html)
+        for control_id in ("removeEditorSubtitlesButton", "removeEditorVideoButton"):
+            self.assertIn(f'id="{control_id}"', editor_html)
+        self.assertIn('method: "DELETE"', main_js)
+        self.assertIn('method: "DELETE"', editor_js)
+        self.assertIn("They remain available in Previous Projects", main_js)
+        self.assertIn("They remain available in Previous Projects", editor_js)
+        self.assertIn("systemInfoText", main_js)
 
     def test_editor_preview_expands_for_widescreen_video(self) -> None:
         editor_css = (ROOT / "static" / "editor.css").read_text(encoding="utf-8")

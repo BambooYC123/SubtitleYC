@@ -63,6 +63,7 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 - 使用 `ffmpeg` 和 `ffprobe` 提取预览帧并检测视频元数据。
 - 拖动视频进度、移动到上一帧或下一帧，并绘制可重复使用的字幕裁剪区域。
 - 视频加载后立即显示预览。在桌面应用中，预览面板可以使用集成的 Qt/PySide 原生 PyAV 界面和内存帧缓存，提供类似 VideOCR 的逐帧拖动体验。
+- 可从当前预览中移除视频或字幕而不删除文件；之后仍可在“以前的项目”中找到它们。
 - 使用高级设置运行已安装或捆绑的 VideOCR CLI / PaddleOCR。
 - 将字幕导出为 SubRip `.srt`、纯文本 `.txt` 或 Advanced SubStation Alpha `.ass`。
 - 将 `.srt`、`.ass` 或 `.ssa` 定时字幕导入当前视频会话。
@@ -74,6 +75,7 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 - 应用内存储管理器可清理下载、上传、预览、生成的字幕、VideOCR 运行文件和日志。
 - 提供英文和简体中文界面；首次启动时，安装程序所选语言会传递给应用。
 - 设置抽屉可配置应用语言、默认下载文件夹、主题、OCR 语言、输出格式，以及 OCR 和时间设置的默认值。
+- 可从设置中复制不含私人路径的系统信息，用于故障排查和错误报告。
 
 ## 字幕工作流程
 
@@ -120,8 +122,8 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 请选择包含适合你电脑的 OCR 运行环境的安装程序：
 
-- `SubtitleYC-0.5.1-windows-cpu-setup.exe`：推荐所有 Windows 用户默认使用。
-- `SubtitleYC-0.5.1-windows-gpu-cuda-12.9-setup.exe`：适用于 Nvidia GTX 16 至 RTX 50 系列。
+- `SubtitleYC-0.5.2-windows-cpu-setup.exe`：推荐所有 Windows 用户默认使用。
+- `SubtitleYC-0.5.2-windows-gpu-cuda-12.9-setup.exe`：适用于 Nvidia GTX 16 至 RTX 50 系列。
 
 每个捆绑安装程序只包含一个 VideOCR 运行环境。安装其他版本时会升级同一份 SubtitleYC 安装并替换原有 OCR 运行环境，避免重复占用数 GB 空间。GPU 版首次运行时会启用 GPU 加速；CPU 版则保持不可用。
 
@@ -192,7 +194,7 @@ $env:SUBTITLEYC_USE_BROWSER = "1"
 - `Space`：播放或暂停。
 - `Left` / `Right`：上一帧或下一帧。
 - `Shift+Left` / `Shift+Right`：上一处或下一处字幕边界。
-- `Ctrl+O`：上传视频。
+- `Ctrl+L`：加载或打开视频。
 - `Ctrl+U`：为当前视频上传字幕。
 - `Ctrl+E`：打开字幕编辑器。
 
@@ -201,6 +203,7 @@ $env:SUBTITLEYC_USE_BROWSER = "1"
 - `Space`：播放或暂停。
 - `Left` / `Right`：上一帧或下一帧。
 - `Shift+Left` / `Shift+Right`：上一处或下一处字幕边界。
+- `Ctrl+L`：加载或打开视频。
 - `Ctrl+S`：保存字幕编辑。
 - `Ctrl+B` / `Ctrl+I` / `Ctrl+U`：编辑字幕条目时，为所选文字设置粗体、斜体或下划线。
 - `Ctrl+Z` / `Ctrl+Y`：撤销或重做字幕编辑。
@@ -253,7 +256,7 @@ workspace\settings.json
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.1"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.2"
 ```
 
 该矩阵要求两个版本使用相同的 VideOCR 版本号。它只编译一次 SubtitleYC，然后为每个安装程序替换捆绑的 OCR 运行环境。使用 `-ArtifactsRoot` 可以将体积较大的 `build`、`dist` 和 `release` 目录放到空间充足的驱动器；省略时则使用仓库目录。脚本会生成 CPU 和 CUDA 12.9 安装程序、本地 SHA-256 校验文件，以及将两个安装程序关联到同一次源代码构建的清单。公开 GitHub Release 只包含两个安装程序；请将校验文件和清单保留在发布记录中。若要在不移除编解码器的情况下减小软件包，请传入 FFmpeg 完整共享构建中的匹配 `ffmpeg.exe` 和 `ffprobe.exe` 路径；相邻的必要 DLL 会自动打包。当前 VideOCR 软件包请参阅 [VideOCR 发布页面](https://github.com/timminator/VideOCR/releases/latest)。

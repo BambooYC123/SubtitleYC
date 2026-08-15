@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SubtitleYC</title>
     <link rel="icon" type="image/png" href="/assets/SubtitleYC.png?v=20260705-02" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260808-01" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260815-01" />
   </head>
   <body>
     <main class="app-shell">
@@ -129,7 +129,7 @@
             </button>
             <div class="source-separator" aria-hidden="true"><span>or</span></div>
             <input id="fileInput" type="file" accept="video/*" hidden />
-            <button id="videoOpenButton" class="icon-button source-button" type="button">
+            <button id="videoOpenButton" class="icon-button source-button" type="button" title="Open a video (Ctrl+L)">
               <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l2 2h5.5A2.5 2.5 0 0 1 20 8.5v7A2.5 2.5 0 0 1 17.5 18h-11A2.5 2.5 0 0 1 4 15.5z" />
                 <path d="M10 11l4 2.5-4 2.5z" />
@@ -287,7 +287,11 @@
         <section class="preview-panel">
           <div class="preview-header">
             <div class="video-meta" id="videoMeta">No video loaded</div>
-            <div class="crop-readout" id="cropReadout">Crop: none</div>
+            <div class="preview-header-actions">
+              <button id="removeSubtitlesButton" class="preview-remove-button" type="button" title="Remove current subtitles from the preview" disabled>Remove Subtitles</button>
+              <button id="removeVideoButton" class="preview-remove-button" type="button" title="Remove the current video from the preview" disabled>Remove Video</button>
+              <div class="crop-readout" id="cropReadout">Crop: none</div>
+            </div>
           </div>
           <div class="canvas-wrap">
             <video id="videoPlayer" class="video-source" preload="metadata" playsinline muted></video>
@@ -670,6 +674,7 @@
               <strong id="settingYtdlpVersion">Checking</strong>
             </div>
           </div>
+          <button id="copySystemInfoButton" class="section-toggle copy-system-info-button" type="button">Copy System Info</button>
         </div>
       </div>
       <div class="settings-actions">
@@ -700,7 +705,7 @@
         </div>
       </section>
     </div>
-    <script src="/assets/i18n.js?v=20260808-01"></script>
-    <script src="/assets/app.js?v=20260808-01"></script>
+    <script src="/assets/i18n.js?v=20260815-01"></script>
+    <script src="/assets/app.js?v=20260815-01"></script>
   </body>
 </html>

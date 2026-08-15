@@ -1,9 +1,9 @@
 #define AppName "SubtitleYC"
 #ifndef AppVersion
-#define AppVersion "0.5.1"
+#define AppVersion "0.5.2"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.5.1"
+#define AppDisplayVersion "0.5.2"
 #endif
 
 #ifndef AppEdition
@@ -16,7 +16,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.5.1-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.5.2-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"
@@ -27,7 +27,7 @@ AppId={{B5080F3A-8E40-4D62-845A-0B6254B2FD0F}
 AppName={#AppName}
 AppVersion={#AppDisplayVersion}
 AppVerName={#AppName} {#AppDisplayVersion} - {#AppEdition}
-AppPublisher=EricYC123
+AppPublisher=BambooYC123
 AppPublisherURL=https://github.com/BambooYC123/SubtitleYC
 AppSupportURL=https://github.com/BambooYC123/SubtitleYC/issues
 AppUpdatesURL=https://github.com/BambooYC123/SubtitleYC/releases
@@ -51,10 +51,10 @@ SetupLogging=yes
 UninstallDisplayIcon={app}\SubtitleYC.exe
 UninstallDisplayName={#AppName}
 VersionInfoVersion={#AppVersion}
-VersionInfoCompany=EricYC123
+VersionInfoCompany=BambooYC123
 VersionInfoDescription=SubtitleYC desktop subtitle extraction and editing app - {#AppEdition}
 VersionInfoProductName=SubtitleYC
-VersionInfoCopyright=Copyright (C) 2026 EricYC123
+VersionInfoCopyright=Copyright (C) 2026 BambooYC123
 LicenseFile=..\LICENSE
 InfoBeforeFile=before-install.txt
 SetupIconFile={#IconFile}

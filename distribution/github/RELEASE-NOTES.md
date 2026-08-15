@@ -1,4 +1,4 @@
-# SubtitleYC v0.5.1
+# SubtitleYC v0.5.2
 
 SubtitleYC is a free and open-source Windows app for extracting, reviewing,
 and editing frame-timed subtitles from video.
@@ -8,8 +8,10 @@ retain their own licences, which are included with the installation.
 
 ## Changes
 
-- Smoother Subtitle Editor timeline scrubbing. Native preview requests are now coalesced so stale frame decodes cannot queue behind the latest slider position.
-- A larger Subtitle Editor video preview. The 16:9 preview now uses more horizontal room and expands into the previously unused space below it.
+- Updated all active maintainer, licence, package, and installer branding to BambooYC123.
+- Added controls to remove the current video or subtitles from the active preview without deleting their files from Previous Projects.
+- Added a privacy-safe Copy System Info button for troubleshooting and bug reports.
+- Changed the load/open-video keyboard shortcut from `Ctrl+O` to `Ctrl+L`.
 
 ## Choose an Installer
 
@@ -33,7 +35,7 @@ GitHub displays a SHA-256 digest beside each installer asset. To calculate the
 digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.5.1-windows-cpu-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.5.2-windows-cpu-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the digest shown on the release page before installation.

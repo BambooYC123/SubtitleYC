@@ -825,6 +825,9 @@ summary.group-title:hover::before {
 .settings-tool-status .section-toggle {
   justify-self: start;
 }
+.copy-system-info-button {
+  margin-top: 9px;
+}
 .toggle-grid {
   display: grid;
   gap: 8px;
@@ -865,6 +868,33 @@ summary.group-title:hover::before {
   margin-bottom: 10px;
   min-height: 24px;
   flex: 0 0 auto;
+}
+
+.preview-header-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.preview-remove-button {
+  min-height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--control-bg);
+  color: var(--muted);
+  padding: 3px 9px;
+  box-shadow: none;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.preview-remove-button:hover:not(:disabled) {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-text);
 }
 
 .video-meta {
@@ -2070,6 +2100,12 @@ summary.group-title:hover::before {
   .preview-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .preview-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .crop-readout {

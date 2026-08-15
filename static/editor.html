@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SubtitleYC Editor</title>
     <link rel="icon" type="image/png" href="/assets/SubtitleYC.png?v=20260705-02" />
-    <link rel="stylesheet" href="/assets/editor.css?v=20260810-01" />
+    <link rel="stylesheet" href="/assets/editor.css?v=20260815-01" />
   </head>
   <body>
     <main class="editor-shell">
@@ -20,7 +20,7 @@
         <div class="top-actions">
           <div class="top-action-group" aria-label="Open project files">
             <input id="videoInput" type="file" accept="video/*" hidden />
-            <button id="videoUploadButton" type="button" data-editor-tooltip="Open a video" data-shortcut="Ctrl+O">Open Video</button>
+            <button id="videoUploadButton" type="button" data-editor-tooltip="Open a video" data-shortcut="Ctrl+L">Open Video</button>
             <button id="uploadButton" type="button" data-editor-tooltip="Upload a subtitle file" data-shortcut="Ctrl+U" disabled>Upload Subtitles</button>
             <button id="previousButton" type="button">Previous Projects</button>
             <label class="editor-copy-row"><input id="videoKeepCopyInput" type="checkbox" /> Keep copy</label>
@@ -37,7 +37,11 @@
         <section class="video-pane" aria-label="Video preview">
           <div class="video-meta-row">
             <strong id="videoTitle">No video loaded</strong>
-            <span id="timeIndicator">Frame: 0 / 0 | Time: 00:00 / 00:00</span>
+            <div class="video-meta-actions">
+              <button id="removeEditorSubtitlesButton" class="preview-remove-button" type="button" data-editor-tooltip="Remove current subtitles from the preview" disabled>Remove Subtitles</button>
+              <button id="removeEditorVideoButton" class="preview-remove-button" type="button" data-editor-tooltip="Remove the current video from the preview" disabled>Remove Video</button>
+              <span id="timeIndicator">Frame: 0 / 0 | Time: 00:00 / 00:00</span>
+            </div>
           </div>
           <div class="video-frame">
             <video id="editorVideo" preload="metadata" playsinline></video>
@@ -138,7 +142,7 @@
       <span id="editorTooltipText"></span>
       <kbd id="editorTooltipShortcut" hidden></kbd>
     </div>
-    <script src="/assets/i18n.js?v=20260809-01"></script>
-    <script src="/assets/editor.js?v=20260810-01"></script>
+    <script src="/assets/i18n.js?v=20260815-01"></script>
+    <script src="/assets/editor.js?v=20260815-01"></script>
   </body>
 </html>

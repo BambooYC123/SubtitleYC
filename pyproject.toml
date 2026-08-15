@@ -1,12 +1,12 @@
 [project]
 name = "subtitleyc"
-version = "0.5.1"
+version = "0.5.2"
 description = "Open-source Windows app for extracting, reviewing, and editing subtitles from burned-in video captions."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
 authors = [
-    { name = "EricYC123" },
+    { name = "BambooYC123" },
 ]
 classifiers = [
     "License :: OSI Approved :: MIT License",

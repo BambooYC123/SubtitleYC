@@ -41,11 +41,11 @@ def authenticated_client() -> TestClient:
 
 class TestSrt(unittest.TestCase):
     def test_system_status_reports_exact_release(self):
-        self.assertEqual(__version__, "0.5.1")
-        self.assertEqual(__release__, "0.5.1")
+        self.assertEqual(__version__, "0.5.2")
+        self.assertEqual(__release__, "0.5.2")
         response = authenticated_client().get("/api/system")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["release_label"], "0.5.1")
+        self.assertEqual(response.json()["release_label"], "0.5.2")
 
     def test_download_format_limits_resolution(self):
         self.assertIn("height<=720", _download_format(720))
@@ -190,6 +190,14 @@ class TestSrt(unittest.TestCase):
             response = client.get(f"/api/videos/{session_id}/subtitles")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["cues"][0]["text"], "Hello")
+
+            response = client.delete(f"/api/videos/{session_id}/subtitles")
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("subtitle_url", response.json())
+            self.assertIsNone(sessions[session_id].srt_path)
+            self.assertEqual(client.get(f"/api/videos/{session_id}/subtitles").status_code, 404)
+            self.assertTrue(source.is_file())
+            self.assertTrue(ass_output.is_file())
         finally:
             with state_lock:
                 sessions.pop(session_id, None)

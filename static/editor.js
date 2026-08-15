@@ -123,6 +123,8 @@ const elements = {
   downloadButton: document.querySelector("#downloadButton"),
   reloadButton: document.querySelector("#reloadButton"),
   videoUploadButton: document.querySelector("#videoUploadButton"),
+  removeEditorSubtitlesButton: document.querySelector("#removeEditorSubtitlesButton"),
+  removeEditorVideoButton: document.querySelector("#removeEditorVideoButton"),
   videoKeepCopyInput: document.querySelector("#videoKeepCopyInput"),
   videoInput: document.querySelector("#videoInput"),
   previousButton: document.querySelector("#previousButton"),
@@ -271,6 +273,19 @@ window.addEventListener("storage", (event) => {
       applyExternalSubtitleFormat(JSON.parse(event.newValue || "{}"));
     } catch (_error) {
       // Ignore malformed cross-tab format updates.
+    }
+    return;
+  }
+
+  if (event.key === "subtitleyc:subtitle-updated") {
+    try {
+      const payload = JSON.parse(event.newValue || "{}");
+      if (payload.detached && sessionId && payload.sessionId === sessionId) {
+        clearEditorSubtitles();
+        setStatus("Subtitles removed from preview. They remain available in Previous Projects.");
+      }
+    } catch (_error) {
+      // Ignore malformed cross-tab subtitle notices.
     }
   }
 });
@@ -925,7 +940,7 @@ function handleEditorKeyboardShortcut(event) {
       if (!elements.saveButton.disabled) saveCues().catch((error) => setStatus(error.message || "Save failed", false));
       return true;
     }
-    if (key === "o") {
+    if (key === "l") {
       event.preventDefault();
       if (!elements.videoUploadButton.disabled) chooseVideoFile().catch((error) => setStatus(error.message || "Open video failed", false));
       return true;
@@ -1125,6 +1140,7 @@ function scrollActiveCueIntoView() {
 function updateTransportState() {
   const hasVideo = Boolean(state.session);
   const hasCues = state.cues.length > 0;
+  const hasSubtitles = Boolean(state.subtitleUrl || hasCues);
   const visibleCue = hasVideo && cueAtTime(currentTime()).index >= 0;
   elements.videoUploadButton.disabled = state.videoUploadActive;
   if (elements.videoKeepCopyInput) elements.videoKeepCopyInput.disabled = state.videoUploadActive;
@@ -1142,6 +1158,8 @@ function updateTransportState() {
   elements.visibleEndForwardButton.disabled = !visibleCue;
   elements.addCueButton.disabled = !hasVideo;
   elements.uploadButton.disabled = !hasVideo;
+  if (elements.removeEditorSubtitlesButton) elements.removeEditorSubtitlesButton.disabled = !hasVideo || !hasSubtitles;
+  if (elements.removeEditorVideoButton) elements.removeEditorVideoButton.disabled = !hasVideo || state.videoUploadActive;
 }
 
 function updatePreview() {
@@ -1549,6 +1567,63 @@ function clearEditorSession() {
   renderCueList();
   updatePreview();
   updateSessionUrl(0);
+}
+
+function clearEditorSubtitles() {
+  state.cues = [];
+  state.selectedIndex = -1;
+  state.activeIndex = -1;
+  state.subtitleUrl = null;
+  state.subtitleFilename = defaultSubtitleFilename();
+  if (state.session) {
+    state.session = {
+      ...state.session,
+      srt_path: null,
+      subtitle_url: null,
+      srt_url: null,
+      subtitle_filename: null,
+    };
+  }
+  setClean();
+  resetHistory();
+  renderCueList();
+  updateDownloadButton();
+  updatePreview();
+}
+
+async function removeEditorSubtitles() {
+  if (!sessionId || (!state.subtitleUrl && !state.cues.length)) return;
+  if (state.dirty) {
+    setStatus("Save or undo subtitle changes before removing subtitles", false);
+    return;
+  }
+
+  const detachedSessionId = sessionId;
+  const session = await fetchJson(`/api/videos/${encodeURIComponent(detachedSessionId)}/subtitles`, { method: "DELETE" });
+  if (sessionId !== detachedSessionId) return;
+  state.session = session;
+  clearEditorSubtitles();
+  try {
+    localStorage.setItem(
+      "subtitleyc:subtitle-updated",
+      JSON.stringify({ sessionId: detachedSessionId, detached: true, at: Date.now() }),
+    );
+  } catch (_error) {
+    // Cross-window synchronization is best-effort.
+  }
+  await refreshLibrary().catch(() => undefined);
+  setStatus("Subtitles removed from preview. They remain available in Previous Projects.");
+}
+
+async function removeEditorVideo() {
+  if (!state.session) return;
+  if (state.dirty) {
+    setStatus("Save or undo subtitle changes before removing the video", false);
+    return;
+  }
+  clearEditorSession();
+  await refreshLibrary().catch(() => undefined);
+  setStatus("Video removed from preview. It remains available in Previous Projects.");
 }
 
 async function loadSession(session = null, options = {}) {
@@ -2014,6 +2089,12 @@ function bindEvents() {
   elements.redoButton.addEventListener("click", redoEdit);
   elements.videoUploadButton.addEventListener("click", () => {
     chooseVideoFile().catch((error) => setStatus(error.message || "Open video failed", false));
+  });
+  elements.removeEditorSubtitlesButton?.addEventListener("click", () => {
+    removeEditorSubtitles().catch((error) => setStatus(error.message || "Could not remove subtitles", false));
+  });
+  elements.removeEditorVideoButton?.addEventListener("click", () => {
+    removeEditorVideo().catch((error) => setStatus(error.message || "Could not remove video", false));
   });
   elements.videoInput.addEventListener("change", () => {
     const file = elements.videoInput.files?.[0];

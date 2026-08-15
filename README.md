@@ -62,6 +62,7 @@ The installer keeps application files under `Program Files\SubtitleYC` by defaul
 - Extract preview frames and probe video metadata with `ffmpeg` and `ffprobe`.
 - Scrub video, step previous/next frame, and draw a reusable subtitle crop area.
 - The preview opens immediately after a video is loaded. In the desktop app, the preview panel can use an integrated Qt/PySide native PyAV surface with an in-memory frame cache for VideOCR-like frame scrubbing.
+- Remove the active video or subtitles from the preview without deleting their files; they remain available under Previous Projects.
 - Run installed or bundled VideOCR CLI / PaddleOCR with advanced settings.
 - Export subtitles as SubRip `.srt`, plain `.txt`, or Advanced SubStation Alpha `.ass`.
 - Import timed subtitles from `.srt`, `.ass`, or `.ssa` into the current video session.
@@ -73,6 +74,7 @@ The installer keeps application files under `Program Files\SubtitleYC` by defaul
 - In-app storage manager for clearing downloads, uploads, previews, generated subtitle files, VideOCR runtime files, and logs.
 - English and Simplified Chinese interfaces, with the installer language carried into the app on first launch.
 - Settings drawer for app language, default download folder, theme, OCR language, output format, and OCR/timing defaults.
+- Copy privacy-safe system information from Settings for troubleshooting and bug reports.
 
 ## Subtitle Workflow
 
@@ -119,8 +121,8 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 Choose the installer containing the OCR runtime suitable for your PC:
 
-- `SubtitleYC-0.5.1-windows-cpu-setup.exe`: recommended default for all Windows users.
-- `SubtitleYC-0.5.1-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
+- `SubtitleYC-0.5.2-windows-cpu-setup.exe`: recommended default for all Windows users.
+- `SubtitleYC-0.5.2-windows-gpu-cuda-12.9-setup.exe`: Nvidia GTX 16 through RTX 50 series.
 
 Each bundled installer contains exactly one VideOCR runtime. Installing another edition upgrades the same SubtitleYC installation and replaces the previous OCR runtime, avoiding duplicated multi-gigabyte files. GPU editions enable GPU acceleration on first run; CPU editions keep it unavailable.
 
@@ -199,7 +201,7 @@ Main preview:
 - `Space`: play or pause.
 - `Left` / `Right`: previous or next frame.
 - `Shift+Left` / `Shift+Right`: previous or next subtitle boundary.
-- `Ctrl+O`: upload a video.
+- `Ctrl+L`: load or open a video.
 - `Ctrl+U`: upload subtitles for the current video.
 - `Ctrl+E`: open the subtitle editor.
 
@@ -208,6 +210,7 @@ Subtitle editor:
 - `Space`: play or pause.
 - `Left` / `Right`: previous or next frame.
 - `Shift+Left` / `Shift+Right`: previous or next subtitle boundary.
+- `Ctrl+L`: load or open a video.
 - `Ctrl+S`: save subtitle edits.
 - `Ctrl+B` / `Ctrl+I` / `Ctrl+U`: style selected subtitle text while editing a cue.
 - `Ctrl+Z` / `Ctrl+Y`: undo or redo subtitle edits.
@@ -259,7 +262,7 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.1"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.2"
 ```
 
 The matrix requires the same VideOCR version for both editions, compiles SubtitleYC once, then replaces the bundled OCR runtime for each installer. Use `-ArtifactsRoot` to place the large `build`, `dist`, and `release` directories on a drive with enough free space; omit it to use the repository directory. It produces CPU and CUDA 12.9 setup executables, local SHA-256 checksum files, and one build manifest tying both installers to the same source run. Public GitHub releases contain only the two setup executables; keep the checksums and manifest with the release records. For smaller packages without removing codecs, pass matching `ffmpeg.exe` and `ffprobe.exe` paths from FFmpeg's full shared build; the required adjacent DLLs are bundled automatically. See the [VideOCR release page](https://github.com/timminator/VideOCR/releases/latest) for the current CPU and GPU packages.

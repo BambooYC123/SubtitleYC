@@ -849,6 +849,27 @@ h1 {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.video-meta-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.video-meta-actions .preview-remove-button {
+  min-height: 26px;
+  padding: 2px 8px;
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 11px !important;
+}
+
+.video-meta-actions .preview-remove-button:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 #videoTitle {
   min-width: 0;
   overflow: hidden;
@@ -898,6 +919,15 @@ h1 {
   }
 
   .top-action-group {
+    flex-wrap: wrap;
+  }
+
+  .video-meta-row {
+    grid-template-columns: 1fr;
+  }
+
+  .video-meta-actions {
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 }

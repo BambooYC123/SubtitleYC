@@ -1,11 +1,11 @@
 param(
-    [string]$AppVersion = "0.5.1",
-    [string]$ReleaseTag = "v0.5.1",
+    [string]$AppVersion = "0.5.2",
+    [string]$ReleaseTag = "v0.5.2",
     [Parameter(Mandatory = $true)]
     [string]$ArtifactsRoot,
     [Parameter(Mandatory = $true)]
     [string]$Destination,
-    [string]$MaintainerName = "EricYC123",
+    [string]$MaintainerName = "BambooYC123",
     [Parameter(Mandatory = $true)]
     [string]$SupportUrl,
     [Parameter(Mandatory = $true)]
@@ -32,7 +32,7 @@ if ([string]::IsNullOrWhiteSpace($MaintainerName) -or $MaintainerName -match '(?
 Assert-HttpsUrl -Name "SupportUrl" -Value $SupportUrl
 Assert-HttpsUrl -Name "RepositoryUrl" -Value $RepositoryUrl
 if ($ReleaseTag -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
-    throw "ReleaseTag must look like v0.5.1 or v0.5.1-beta.1."
+    throw "ReleaseTag must look like v0.5.2 or v0.5.2-beta.1."
 }
 $releaseLabel = $ReleaseTag.Substring(1)
 

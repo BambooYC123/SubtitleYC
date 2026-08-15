@@ -234,6 +234,8 @@ const elements = {
   activityList: document.querySelector("#activityList"),
   videoMeta: document.querySelector("#videoMeta"),
   cropReadout: document.querySelector("#cropReadout"),
+  removeSubtitlesButton: document.querySelector("#removeSubtitlesButton"),
+  removeVideoButton: document.querySelector("#removeVideoButton"),
   downloadLink: document.querySelector("#downloadLink"),
   downloadLinkLabel: document.querySelector("#downloadLinkLabel"),
   storageButton: document.querySelector("#storageButton"),
@@ -311,6 +313,7 @@ const elements = {
   settingAppVersion: document.querySelector("#settingAppVersion"),
   settingVideocrVersion: document.querySelector("#settingVideocrVersion"),
   settingYtdlpVersion: document.querySelector("#settingYtdlpVersion"),
+  copySystemInfoButton: document.querySelector("#copySystemInfoButton"),
   storageCloseButton: document.querySelector("#storageCloseButton"),
   storageOverlay: document.querySelector("#storageOverlay"),
   storageDrawer: document.querySelector("#storageDrawer"),
@@ -790,6 +793,35 @@ async function refreshSystemInfo({ announce = false } = {}) {
   renderSystemInfo(system);
   if (announce) setStatus("Tool versions refreshed", 1);
   return system;
+}
+
+function systemInfoText(system = state.system) {
+  const release = toolText(system?.release_label || system?.app_version);
+  const edition = toolText(
+    system?.videocr_build_variant || (system?.videocr_gpu_cli ? "gpu" : system?.videocr_cli ? "cpu" : "development"),
+  );
+  const videocrVersion = system?.videocr_cli ? toolText(system?.videocr_cli_version, "Available") : "Not found";
+  const videocrMode = system?.videocr_gpu_cli ? "GPU" : "CPU";
+  const language = currentUiLanguage() === "zh-CN" ? "Chinese Simplified" : "English";
+  const theme = currentTheme() === "light" ? "Light" : "Dark";
+  return [
+    "SubtitleYC system information",
+    `SubtitleYC: ${release}`,
+    `Edition: ${edition}`,
+    `VideOCR: ${videocrVersion}${system?.videocr_cli ? ` (${videocrMode})` : ""}`,
+    `yt-dlp: ${toolText(system?.yt_dlp_version)}`,
+    `ffmpeg: ${system?.ffmpeg ? "Available" : "Not found"}`,
+    `ffprobe: ${system?.ffprobe ? "Available" : "Not found"}`,
+    `Interface language: ${language}`,
+    `Theme: ${theme}`,
+    `Desktop shell: ${window.pywebview?.api ? "Yes" : "No"}`,
+  ].join("\n");
+}
+
+async function copySystemInfo() {
+  const system = state.system || await refreshSystemInfo();
+  await navigator.clipboard.writeText(systemInfoText(system));
+  setStatus("System information copied", 1);
 }
 function selectedStorageCategories() {
   return Array.from(elements.storageList.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
@@ -1632,7 +1664,7 @@ function handleGlobalKeyboardShortcut(event) {
       }
       return false;
     }
-    if (key === "o") {
+    if (key === "l") {
       event.preventDefault();
       if (!elements.videoOpenButton.disabled) chooseLocalVideoFile().catch((error) => setStatus(error.message || error, 0));
       return true;
@@ -2299,6 +2331,7 @@ function updateNativeVideoVisibility() {
 
 function updateActionStates() {
   const hasSession = Boolean(state.session);
+  const hasSubtitles = Boolean(state.subtitleUrl || state.subtitleCues.length);
   const hasCrop = Boolean(state.crop);
   const hasUrl = elements.urlInput.value.trim().length > 0;
   const videoBusy = state.previewPreparing || state.fileUploadActive;
@@ -2333,6 +2366,8 @@ function updateActionStates() {
   updatePreviewSubtitleActionStates(canScrub);
   elements.subtitleEditorButton.disabled = state.previewPreparing;
   elements.subtitleUploadButton.disabled = !hasSession || state.previewPreparing;
+  if (elements.removeSubtitlesButton) elements.removeSubtitlesButton.disabled = !hasSession || !hasSubtitles || state.previewPreparing;
+  if (elements.removeVideoButton) elements.removeVideoButton.disabled = !hasSession || videoBusy || ocrActive;
   if (elements.recentProjects) elements.recentProjects.hidden = hasSession;
 }
 function resizeCanvas() {
@@ -3196,6 +3231,85 @@ async function loadSession(session) {
 
 }
 
+async function removeCurrentSubtitles() {
+  if (!state.session || (!state.subtitleUrl && !state.subtitleCues.length)) return;
+  if (state.subtitleDirty) {
+    setStatus("Save or undo subtitle changes before removing subtitles", 0);
+    openSubtitleEditor();
+    return;
+  }
+
+  const sessionId = state.session.id;
+  const originalName = state.session.original_name || "subtitles";
+  const format = state.subtitleFormat || selectedSubtitleFormat();
+  const session = await fetchJson(`/api/videos/${encodeURIComponent(sessionId)}/subtitles`, { method: "DELETE" });
+  if (state.session?.id !== sessionId) return;
+
+  state.session = session;
+  closeSubtitleEditor();
+  clearSubtitleDownload(safeSubtitleName(originalName, format), format);
+  syncNativePreviewSurface();
+  try {
+    localStorage.setItem(
+      "subtitleyc:subtitle-updated",
+      JSON.stringify({ sessionId, detached: true, at: Date.now() }),
+    );
+  } catch (_error) {
+    // Cross-window synchronization is best-effort.
+  }
+  await refreshLibrary().catch(() => undefined);
+  setStatus("Subtitles removed from preview. They remain available in Previous Projects.", 1);
+}
+
+async function removeCurrentVideo() {
+  if (!state.session) return;
+  if (state.subtitleDirty) {
+    setStatus("Save or undo subtitle changes before removing the video", 0);
+    openSubtitleEditor();
+    return;
+  }
+
+  stopPreviewPlayback(false);
+  cancelPreviewWarmup();
+  cancelPreviewFrameDebounce();
+  clearPreviewFrameCache();
+  state.videoLoadToken += 1;
+  state.previewFrameToken += 1;
+  state.previewFrameLoading = false;
+  state.previewFrameQueuedTime = null;
+  state.previewPreparing = false;
+  state.previewScrubbing = false;
+  state.previewScrubWasPlaying = false;
+  state.session = null;
+  state.crop = null;
+  state.dragStart = null;
+  state.previewTime = 0;
+  state.image = new Image();
+  state.imageReady = false;
+  state.videoReady = false;
+  closeSubtitleEditor();
+  clearSubtitleDownload("subtitles.srt", selectedSubtitleFormat());
+  elements.video.removeAttribute("src");
+  try {
+    elements.video.load();
+  } catch (_error) {
+    // Browser media teardown is best-effort.
+  }
+  elements.startInput.value = "0";
+  elements.endInput.value = "";
+  elements.seekSlider.value = "0";
+  elements.seekSlider.max = "0";
+  elements.cropReadout.textContent = "Crop: none";
+  setMinDurationFromSession(null);
+  updateVideoMeta();
+  updateTimeUI();
+  setNativePreviewVisible(false);
+  resizeCanvas();
+  updateActionStates();
+  await refreshLibrary().catch(() => undefined);
+  setStatus("Video removed from preview. It remains available in Previous Projects.", 1);
+}
+
 async function applyEditorSessionUpdate(payload = {}, options = {}) {
   const nextSessionId = String(payload.sessionId || "");
   if (!nextSessionId) return;
@@ -3646,6 +3760,15 @@ elements.subtitleEditorButton.addEventListener("click", () => {
   openSubtitleEditorTab().catch((error) => setStatus(error.message || "Could not open SubtitleYC Editor", 0));
 });
 elements.subtitleUploadButton.addEventListener("click", openSubtitleImportPicker);
+elements.removeSubtitlesButton?.addEventListener("click", () => {
+  removeCurrentSubtitles().catch((error) => setStatus(error.message || "Could not remove subtitles", 0));
+});
+elements.removeVideoButton?.addEventListener("click", () => {
+  removeCurrentVideo().catch((error) => setStatus(error.message || "Could not remove video", 0));
+});
+elements.copySystemInfoButton?.addEventListener("click", () => {
+  copySystemInfo().catch((error) => setStatus(error.message || "Could not copy system information", 0));
+});
 elements.subtitleCloseButton.addEventListener("click", closeSubtitleEditor);
 elements.subtitleOverlay.addEventListener("click", closeSubtitleEditor);
 elements.subtitleRefreshButton.addEventListener("click", () => {
@@ -3706,9 +3829,26 @@ window.addEventListener("storage", (event) => {
   try {
     const payload = JSON.parse(event.newValue || "{}");
     if (state.session?.id === payload.sessionId) {
-      loadSubtitleCues({ silent: true }).catch(() => undefined);
+      if (payload.detached) {
+        state.session = {
+          ...state.session,
+          srt_path: null,
+          subtitle_url: null,
+          srt_url: null,
+          subtitle_filename: null,
+        };
+        closeSubtitleEditor();
+        clearSubtitleDownload(
+          safeSubtitleName(state.session.original_name || "subtitles", state.subtitleFormat),
+          state.subtitleFormat,
+        );
+        syncNativePreviewSurface();
+        setStatus("Subtitles removed from preview. They remain available in Previous Projects.", 1);
+      } else {
+        loadSubtitleCues({ silent: true }).catch(() => undefined);
+      }
     } else if (!state.session && payload.sessionId) {
-      applyEditorSessionUpdate(payload, { loadSubtitles: true }).catch(() => undefined);
+      if (!payload.detached) applyEditorSessionUpdate(payload, { loadSubtitles: true }).catch(() => undefined);
     }
   } catch (_error) {
     // Ignore malformed cross-tab update notices.

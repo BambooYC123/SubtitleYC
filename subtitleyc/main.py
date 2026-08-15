@@ -433,6 +433,8 @@ def _normalize_generated_srt_timing(
     return cues_to_srt(adjusted)
 
 def _subtitle_source_path(session: VideoSession) -> Path | None:
+    if not session.srt_path:
+        return None
     readable_path = _subtitle_storage_path(session, "srt")
     if readable_path.is_file():
         return readable_path
@@ -2663,6 +2665,22 @@ async def import_subtitle_cues(session_id: str, file: UploadFile = File(...)) ->
 @app.put("/api/videos/{session_id}/subtitles")
 def save_subtitle_cues(session_id: str, request: SubtitleEditRequest) -> dict[str, Any]:
     return _save_subtitle_cues(session_id, request)
+
+
+@app.delete("/api/videos/{session_id}/subtitles")
+def detach_subtitle_cues(session_id: str) -> dict[str, Any]:
+    session = _get_session(session_id)
+    with state_lock:
+        stored = sessions[session.id]
+        had_subtitles = bool(stored.srt_path)
+        stored.srt_path = None
+        payload = _session_response(stored)
+    if had_subtitles:
+        log_event(
+            f"Detached subtitles from active preview session={session.id}; stored files were preserved",
+            category="subtitle",
+        )
+    return payload
 
 
 

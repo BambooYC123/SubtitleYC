@@ -30,7 +30,7 @@ class LicenseBundleTests(unittest.TestCase):
     def test_project_uses_standard_mit_license(self) -> None:
         license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
         self.assertIn("MIT License", license_text)
-        self.assertIn("Copyright (c) 2026 EricYC123", license_text)
+        self.assertIn("Copyright (c) 2026 BambooYC123", license_text)
         self.assertIn("Permission is hereby granted, free of charge", license_text)
         self.assertIn('THE SOFTWARE IS PROVIDED "AS IS"', license_text)
         self.assertNotIn("End User License Agreement", license_text)
