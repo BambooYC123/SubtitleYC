@@ -11,7 +11,8 @@
 
 ## Build and Verification
 
-- [ ] Build CPU and CUDA 12.9 installers in one `build-public-releases.ps1` run.
+- [ ] Build the web EXE, app ZIP and both pinned runtime ZIPs in one `build-public-releases.ps1` run.
+- [ ] Test first-use runtime download, interruption/resume, checksum failure, and app upgrade with runtime reuse.
 - [ ] Run the complete automated test suite and dependency audit.
 - [ ] Test install, launch, OCR, download, edit, export, upgrade, and uninstall on a clean Windows VM.
 - [ ] Test CPU mode on a PC without an Nvidia GPU.
@@ -24,9 +25,10 @@
 
 - [ ] Publish the source repository under the MIT License.
 - [ ] Enable GitHub Issues, Discussions, and Private Vulnerability Reporting.
-- [ ] Publish `v0.5.2` from the exact tested commit.
-- [ ] Upload only the CPU and CUDA 12.9 setup executables; retain checksums and the build manifest with the release records.
-- [ ] Make CPU the recommended default and explain the GPU hardware requirement.
+- [ ] Publish `v0.6.0` from the exact tested commit.
+- [ ] Upload the web EXE, app ZIP and both runtime ZIPs to the exact release tag in the embedded catalog; retain checksums and the build manifest.
+- [ ] Confirm the app payload and both runtime URLs work before promoting the release. Offer optional offline installer ZIPs if built.
+- [ ] Include CPU OCR during setup and explain the optional GPU hardware requirement and GPU Acceleration setting.
 - [ ] Keep each GitHub release asset below 2 GiB.
 - [ ] Do not commit installers, signing keys, certificates, logs, user media, build output, or workspace data.
 

@@ -23,7 +23,7 @@ from PySide6.QtWebEngineCore import (
     QWebEngineUrlRequestInterceptor,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QStyle, QTabBar, QTabWidget, QToolButton, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QStyle, QTabBar, QTabWidget, QToolButton, QWidget
 
 from .native_video import NativeVideoDecoder
 
@@ -276,6 +276,9 @@ class NativePreviewSurface(QWidget):
             self.show()
 
     def configure(self, payload: dict[str, Any], session: dict[str, Any] | None) -> None:
+        if payload.get("visible") is False:
+            self.hide()
+            return
         rect = payload.get("rect") or {}
         width = max(1, int(round(float(rect.get("width") or 1))))
         height = max(1, int(round(float(rect.get("height") or 1))))
@@ -926,6 +929,8 @@ class QtDesktopWindow(QMainWindow):
         self.on_ready = on_ready
         self.ready_notified = False
         self.editor_tabs: dict[str, EditorPreviewTab] = {}
+        self._close_pending = False
+        self._close_approved = False
         self.setWindowTitle("SubtitleYC")
         self.resize(1280, 840)
         self.setMinimumSize(980, 680)
@@ -1144,15 +1149,92 @@ class QtDesktopWindow(QMainWindow):
 
     def close_tab(self, index: int) -> None:
         widget = self.tabs.widget(index)
-        if widget is self.container:
+        if widget is None or widget is self.container or self._close_pending:
             return
+        self._confirm_close([widget.web], lambda: self._remove_editor_tab(widget))
+
+    def _remove_editor_tab(self, widget: QWidget) -> None:
         for key, editor in list(self.editor_tabs.items()):
             if editor is widget:
                 editor.close_preview()
                 del self.editor_tabs[key]
-        self.tabs.removeTab(index)
+        self.tabs.removeTab(self.tabs.indexOf(widget))
         if widget is not None:
             widget.deleteLater()
+
+    def _confirm_close(self, views: list[QWebEngineView], accepted: Any) -> None:
+        """Keep native close actions from bypassing the web editors' dirty state."""
+        self._close_pending = True
+        self.tabs.setEnabled(False)
+        chinese = self.shell_language == "zh-CN"
+
+        def finish(ok: bool) -> None:
+            if not self._close_pending:
+                return
+            self._close_pending = False
+            self.tabs.setEnabled(True)
+            if ok:
+                accepted()
+
+        def failed() -> None:
+            QMessageBox.warning(self, "SubtitleYC", "无法完成保存，窗口将保持打开。" if chinese else "Could not finish saving. The window will stay open.")
+            finish(False)
+
+        def check(index: int, attempts: int = 0) -> None:
+            if not self._close_pending:
+                return
+            if index >= len(views):
+                finish(True)
+                return
+            if attempts >= 150:
+                failed()
+                return
+            page = views[index].page()
+
+            def received(raw: Any) -> None:
+                if not self._close_pending:
+                    return
+                try:
+                    status = json.loads(raw)
+                except (TypeError, ValueError):
+                    failed()
+                    return
+                if status.get("busy"):
+                    QTimer.singleShot(200, lambda: check(index, attempts + 1))
+                    return
+                if not status.get("dirty"):
+                    check(index + 1)
+                    return
+                choice = QMessageBox.warning(
+                    self, "SubtitleYC",
+                    "关闭前保存字幕更改？" if chinese else "Save subtitle changes before closing?",
+                    QMessageBox.StandardButton.Save | QMessageBox.StandardButton.Discard | QMessageBox.StandardButton.Cancel,
+                    QMessageBox.StandardButton.Cancel,
+                )
+                if choice == QMessageBox.StandardButton.Cancel:
+                    finish(False)
+                elif choice == QMessageBox.StandardButton.Discard:
+                    check(index + 1)
+                else:
+                    page.runJavaScript("window.subtitleycSaveForClose()", lambda _result: poll_save(index, 0))
+
+            page.runJavaScript("JSON.stringify(window.subtitleycCloseState ? window.subtitleycCloseState() : {dirty:false,busy:false})", received)
+
+        def poll_save(index: int, attempts: int) -> None:
+            if not self._close_pending:
+                return
+            def received(result: Any) -> None:
+                if not self._close_pending:
+                    return
+                if result == "saved":
+                    check(index + 1)
+                elif result == "pending" and attempts < 150:
+                    QTimer.singleShot(200, lambda: poll_save(index, attempts + 1))
+                else:
+                    failed()
+            views[index].page().runJavaScript("window.subtitleycCloseSaveResult", received)
+
+        check(0)
 
     def _make_tab_close_button(self, editor: EditorPreviewTab) -> QToolButton:
         button = QToolButton(self.tabs.tabBar())
@@ -1208,6 +1290,14 @@ class QtDesktopWindow(QMainWindow):
         self.web.page().runJavaScript(script)
 
     def closeEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name.
+        if not self._close_approved:
+            event.ignore()
+            if not self._close_pending:
+                def approved() -> None:
+                    self._close_approved = True
+                    self.close()
+                self._confirm_close([self.web, *[editor.web for editor in self.editor_tabs.values()]], approved)
+            return
         self.preview.close_decoder()
         for editor in list(self.editor_tabs.values()):
             editor.close_preview()

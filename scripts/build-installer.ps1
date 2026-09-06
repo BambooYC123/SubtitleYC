@@ -1,9 +1,11 @@
 param(
-    [string]$Version = "0.5.2",
-    [string]$ReleaseLabel = "0.5.2",
+    [string]$Version = "0.6.0",
+    [string]$ReleaseLabel = "0.6.0",
     [switch]$BundleExternalTools,
+    [switch]$CoreInstaller,
     [switch]$SkipAppBuild,
     [switch]$SkipPortableZip,
+    [switch]$SplitPayload,
     [ValidateSet("CPU", "GPU-CUDA-12.9")]
     [string]$VideOCRVariant = "CPU",
     [string]$VideOCRCliPath = $env:VIDEOCR_CLI,
@@ -18,6 +20,9 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if ($CoreInstaller -and $BundleExternalTools) {
+    throw "Choose either -CoreInstaller or -BundleExternalTools, not both."
+}
 $Root = Split-Path -Parent $PSScriptRoot
 if (-not $ArtifactsRoot) {
     $ArtifactsRoot = $Root
@@ -30,9 +35,16 @@ $InstallerScript = Join-Path $Root "installer\SubtitleYC.iss"
 
 function Invoke-Checked {
     param([scriptblock]$Command)
-    & $Command
-    if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE"
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & $Command
+        $commandExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($commandExitCode -ne 0) {
+        throw "Command failed with exit code $commandExitCode"
     }
 }
 
@@ -133,8 +145,11 @@ if (-not $SkipAppBuild) {
     if ($SkipPortableZip) {
         $buildArgs += "-SkipPortableZip"
     }
-    if ($BundleExternalTools) {
-        $buildArgs += @("-BundleExternalTools", "-VideOCRVariant", $VideOCRVariant)
+    if ($CoreInstaller) { $buildArgs += "-CoreInstaller" }
+    if ($BundleExternalTools -or $CoreInstaller) {
+        if (-not $CoreInstaller) {
+            $buildArgs += @("-BundleExternalTools", "-VideOCRVariant", $VideOCRVariant)
+        }
         if ($VideOCRCliPath) {
             $buildArgs += @("-VideOCRCliPath", $VideOCRCliPath)
         }
@@ -146,10 +161,7 @@ if (-not $SkipAppBuild) {
         }
     }
     $buildScript = Join-Path $Root "scripts\build-windows.ps1"
-    & powershell -ExecutionPolicy Bypass -File $buildScript @buildArgs
-    if ($LASTEXITCODE -ne 0) {
-        throw "App build failed with exit code $LASTEXITCODE"
-    }
+    Invoke-Checked { & powershell -ExecutionPolicy Bypass -File $buildScript @buildArgs }
 }
 
 if (-not (Test-Path (Join-Path $DistDir "SubtitleYC.exe"))) {
@@ -191,9 +203,21 @@ if (-not $iscc) {
 New-Item -ItemType Directory -Force -Path $ReleaseDir | Out-Null
 $sourceDir = (Resolve-Path $DistDir).Path
 $outputDir = (Resolve-Path $ReleaseDir).Path
+if ($CoreInstaller) {
+    foreach ($required in @("tools\ffmpeg\ffmpeg.exe", "tools\ffmpeg\ffprobe.exe", "_internal\assets\runtime-catalog.json")) {
+        if (-not (Test-Path -LiteralPath (Join-Path $sourceDir $required))) {
+            throw "Core installer is missing $required. Package runtimes and rebuild first."
+        }
+    }
+    if (Get-ChildItem (Join-Path $sourceDir "tools") -Recurse -Filter "videocr-cli.exe" -File) {
+        throw "The core installer must not bundle an OCR runtime. Rebuild with -CoreInstaller."
+    }
+}
 $editionSlug = $VideOCRVariant.ToLowerInvariant()
 $suffix = if ($BundleExternalTools) { "-$editionSlug" } else { "" }
-$editionName = if (-not $BundleExternalTools) {
+$editionName = if ($CoreInstaller) {
+    "Download OCR runtimes in app"
+} elseif (-not $BundleExternalTools) {
     "External Tools Edition"
 } else {
     switch ($VideOCRVariant) {
@@ -202,6 +226,12 @@ $editionName = if (-not $BundleExternalTools) {
     }
 }
 $outputBaseFilename = "SubtitleYC-$ReleaseLabel-windows$suffix-setup"
+if ($SplitPayload) {
+    # Isolate companion files from the single-executable public release pipeline.
+    $splitOutputDir = Join-Path $outputDir "$outputBaseFilename-fast-start-$([guid]::NewGuid().ToString('N'))"
+    New-Item -ItemType Directory -Path $splitOutputDir | Out-Null
+    $outputDir = $splitOutputDir
+}
 $compilerArguments = @(
     "/DAppVersion=$Version",
     "/DAppDisplayVersion=$ReleaseLabel",
@@ -210,12 +240,15 @@ $compilerArguments = @(
     "/DOutputDir=$outputDir",
     "/DOutputBaseFilename=$outputBaseFilename"
 )
+if ($SplitPayload) {
+    $compilerArguments += "/DSplitPayload=1"
+}
 
 Invoke-Checked {
     & $iscc @compilerArguments $InstallerScript
 }
 
-$installerPath = Join-Path $ReleaseDir "$outputBaseFilename.exe"
+$installerPath = Join-Path $outputDir "$outputBaseFilename.exe"
 if (-not (Test-Path $installerPath)) {
     throw "Installer build finished but $installerPath was not created."
 }
@@ -224,6 +257,39 @@ Invoke-CodeSign -Path $installerPath
 $installerHash = (Get-FileHash -LiteralPath $installerPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $installerHashPath = "$installerPath.sha256"
 Set-Content -LiteralPath $installerHashPath -Value "$installerHash  $(Split-Path -Leaf $installerPath)" -Encoding ASCII
+
+if ($SplitPayload) {
+    $payloadFiles = @(Get-ChildItem -LiteralPath $outputDir -Filter "$outputBaseFilename-*.bin" -File)
+    if ($payloadFiles.Count -eq 0) {
+        throw "Fast-start installer build did not create its required payload files."
+    }
+    foreach ($payloadFile in $payloadFiles) {
+        $payloadHash = (Get-FileHash -LiteralPath $payloadFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        Set-Content -LiteralPath "$($payloadFile.FullName).sha256" -Value "$payloadHash  $($payloadFile.Name)" -Encoding ASCII
+    }
+    Set-Content -LiteralPath (Join-Path $outputDir "START-HERE.txt") -Encoding UTF8 -Value @"
+SubtitleYC fast-start installer
+
+Keep the setup EXE and ALL .bin files together in this folder.
+Run $outputBaseFilename.exe to install SubtitleYC.
+If this folder came in a ZIP, extract the entire ZIP before running Setup.
+The small EXE allows Windows to finish its startup checks sooner; the setup
+window then provides installation progress while unpacking the payload.
+Windows security checks may still delay the first window on some computers.
+"@
+    Write-Host "Fast-start package: $outputDir"
+    Write-Host "Distribute the entire folder, including all .bin files and START-HERE.txt."
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $packagePath = Join-Path $ReleaseDir "$outputBaseFilename.zip"
+    # BIN files are already compressed. Store them without an expensive second pass.
+    [IO.Compression.ZipFile]::CreateFromDirectory($outputDir, $packagePath, [IO.Compression.CompressionLevel]::NoCompression, $false)
+    if ((Get-Item -LiteralPath $packagePath).Length -ge 2GB) {
+        throw "Package exceeds GitHub's per-asset limit: $packagePath. Distribute its individual EXE and BIN files instead."
+    }
+    $packageHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    Set-Content -LiteralPath "$packagePath.sha256" -Value "$packageHash  $(Split-Path -Leaf $packagePath)" -Encoding ASCII
+    Write-Host "GitHub release package: $packagePath"
+}
 
 Write-Host "Built $installerPath"
 Write-Host "SHA-256: $installerHashPath"

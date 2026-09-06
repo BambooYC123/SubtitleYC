@@ -58,8 +58,9 @@ class InstallerLayoutTests(unittest.TestCase):
     def test_installer_build_can_skip_the_redundant_portable_zip(self) -> None:
         installer = INSTALLER_SCRIPT.read_text(encoding="utf-8")
         build_script = (ROOT / "scripts" / "build-installer.ps1").read_text(encoding="utf-8")
-        self.assertNotIn("DiskSpanning=yes", installer)
-        self.assertNotIn('"/DSplitPayload=1"', build_script)
+        self.assertIn("#ifdef SplitPayload", installer)
+        self.assertIn("DiskSpanning=yes", installer)
+        self.assertIn('"/DSplitPayload=1"', build_script)
         self.assertIn("-SkipPortableZip", build_script)
 
     def test_release_build_records_ffmpeg_provenance(self) -> None:
@@ -83,9 +84,9 @@ class InstallerLayoutTests(unittest.TestCase):
 
         self.assertIn('ValidateSet("CPU", "GPU-CUDA-12.9")', windows_build)
         self.assertIn('ValidateSet("CPU", "GPU-CUDA-12.9")', installer_build)
-        self.assertIn("windows-cpu-setup.exe", public_build)
-        self.assertIn("windows-gpu-cuda-12.9-setup.exe", public_build)
-        self.assertIn("exactly the CPU and CUDA 12.9 installers", public_stage)
+        self.assertIn("windows-cpu-setup.zip", public_build)
+        self.assertIn("windows-gpu-cuda-12.9-setup.zip", public_build)
+        self.assertIn("the web installer, app payload and both runtimes", public_stage)
         self.assertNotIn("$sourcePath, $sourceChecksumPath", public_stage)
         self.assertNotIn("$manifestPath -Destination $releaseAssetsDir", public_stage)
         self.assertNotIn('Join-Path $TemplateDir "RELEASE-NOTES.md") -Destination $repositoryDir', public_stage)

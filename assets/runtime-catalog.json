@@ -1,0 +1,18 @@
+{
+  "cpu": {
+    "version": "1.5.1",
+    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.6.0/SubtitleYC-0.6.0-ocr-cpu.zip",
+    "sha256": "e7974209136b2d8aab6170eeb2b4e3105a073309c653f881c01932c9b7e6e99d",
+    "size_bytes": 519704064,
+    "unpacked_bytes": 1346772826,
+    "cli": "videocr-cli-CPU-v1.5.1/videocr-cli.exe"
+  },
+  "gpu-cuda-12.9": {
+    "version": "1.5.1",
+    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.6.0/SubtitleYC-0.6.0-ocr-gpu-cuda-12.9.zip",
+    "sha256": "3c8e174b3dd21f6d29513567b937fdbcafafb9f938dbd4843566608f2b4d7a26",
+    "size_bytes": 1681349910,
+    "unpacked_bytes": 3843427203,
+    "cli": "videocr-cli-GPU-v1.5.1-CUDA-12.9/videocr-cli.exe"
+  }
+}

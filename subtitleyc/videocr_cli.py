@@ -67,6 +67,12 @@ def _runtime_root() -> Path:
 
 
 def find_videocr_cli(prefer_gpu: bool = False) -> str | None:
+    from .runtime_manager import manager
+
+    for edition in (["gpu-cuda-12.9"] if prefer_gpu else ["cpu", "gpu-cuda-12.9"]):
+        managed = manager.installed_cli(edition)
+        if managed:
+            return managed
     env_path = os.environ.get("VIDEOCR_CLI")
     candidates: list[Path] = []
     if env_path and (not prefer_gpu or "cpu" not in env_path.casefold()):

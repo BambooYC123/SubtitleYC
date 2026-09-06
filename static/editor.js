@@ -392,7 +392,7 @@ function setNativePreviewVisible(visible) {
 function setNativePreviewEnabled(enabled) {
   const next = Boolean(enabled && nativePreviewApi());
   if (state.useNativePreview === next) {
-    if (next) setNativePreviewVisible(true);
+    if (next) setNativePreviewVisible(!window.subtitleycModalOpen?.());
     return;
   }
   state.useNativePreview = next;
@@ -402,7 +402,7 @@ function setNativePreviewEnabled(enabled) {
     elements.video.classList.add("is-hidden");
     if (elements.frameFallback) elements.frameFallback.hidden = true;
     elements.subtitleOverlay.hidden = true;
-    setNativePreviewVisible(true);
+    setNativePreviewVisible(!window.subtitleycModalOpen?.());
   } else {
     setNativePreviewVisible(false);
     elements.video.classList.toggle("is-hidden", state.useFrameFallback);
@@ -608,6 +608,7 @@ function nativePreviewOccluders() {
 function nativePreviewPayload() {
   const rect = elements.videoFrame.getBoundingClientRect();
   return {
+    visible: !window.subtitleycModalOpen?.(),
     session_id: sessionId,
     rect: {
       left: rect.left,
@@ -1027,6 +1028,7 @@ function cueAtTime(time, preferredIndex = state.selectedIndex) {
 }
 
 function markDirty() {
+  state.editRevision = (state.editRevision || 0) + 1;
   state.dirty = true;
   elements.saveButton.disabled = false;
   elements.cueMeta.textContent = `${subtitleFormatLabel(state.subtitleFormat)} - Unsaved`;
@@ -1708,25 +1710,34 @@ async function loadCues(options = {}) {
   }
 }
 
+const cueSaver = createSubtitleSaveCoordinator({
+  snapshot: () => ({ sessionId, cues: state.cues, revision: state.editRevision || 0 }),
+  write: (data) => fetchJson(`/api/videos/${encodeURIComponent(data.sessionId)}/subtitles`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subtitle_format: EDITOR_SUBTITLE_FORMAT, cues: data.cues.filter((cue) => cue.text.trim()) }),
+  }),
+  apply: (payload) => {
+    state.subtitleFormat = EDITOR_SUBTITLE_FORMAT;
+    applySubtitleDownloadPayload(payload);
+    state.cues = (payload.cues || []).map(normalizeCue);
+    setClean();
+    renderCueList();
+    updatePreview();
+    publishSubtitleUpdated();
+    setStatus(`Saved ${state.cues.length} cues`);
+  },
+  changed: () => setStatus("Saved earlier changes; newer edits are still unsaved"),
+});
+installSubtitleCloseGuard({ dirty: () => state.dirty, save: () => saveCues(), busy: () => cueSaver.busy });
+
 async function saveCues() {
   if (!sessionId) {
     setStatus("Load a video before saving subtitles", false);
     return;
   }
   applyCueForm({ silent: true });
-  const payload = await fetchJson(`/api/videos/${encodeURIComponent(sessionId)}/subtitles`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subtitle_format: EDITOR_SUBTITLE_FORMAT, cues: state.cues.filter((cue) => cue.text.trim()) }),
-  });
-  state.subtitleFormat = EDITOR_SUBTITLE_FORMAT;
-  applySubtitleDownloadPayload(payload);
-  state.cues = (payload.cues || []).map(normalizeCue);
-  setClean();
-  renderCueList();
-  updatePreview();
-  publishSubtitleUpdated();
-  setStatus(`Saved ${state.cues.length} cues`);
+  return cueSaver.save();
 }
 
 async function downloadSavedSubtitle() {
@@ -2083,6 +2094,9 @@ function bindEvents() {
     event.preventDefault();
     saveCues().catch((error) => setStatus(error.message || "Save failed", false));
   });
+  for (const input of [elements.textInput, elements.startInput, elements.endInput]) {
+    input.addEventListener("input", markDirty);
+  }
   elements.addCueButton.addEventListener("click", addCue);
   elements.deleteCueButton.addEventListener("click", deleteSelectedCue);
   elements.undoButton.addEventListener("click", undoEdit);

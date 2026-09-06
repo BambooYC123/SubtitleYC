@@ -14,6 +14,8 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 ## 下载
 
+0.6.0 使用小型联网安装 EXE。安装程序会下载并安装应用、FFmpeg 和 CPU OCR，首次启动即可使用 CPU OCR。可在 **GPU OCR** 面板中选择下载 Nvidia GPU 运行库，以加快 OCR；安装后请在 OCR 设置中开启 **GPU 加速**。
+
 请从 [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases) 下载 Windows 版本。CPU 版无需 Nvidia GPU；CUDA 版可在支持的 Nvidia 系统上提供更快的 OCR 速度。
 
 安装程序及其捆绑的 SubtitleYC 应用文件依据 MIT 许可证分发。捆绑的第三方工具继续适用各自的许可证，相关许可证会随安装文件一同提供。
@@ -42,7 +44,7 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 ## 快速开始
 
-1. 下载 CPU 或 GPU Windows 安装程序。
+1. 联网下载并运行 `SubtitleYC-0.6.0-windows-setup.exe`。CPU OCR 会自动安装。需要 Nvidia GPU 加速时，打开 **GPU OCR** 下载 CUDA 12.9 运行库，安装后开启 **GPU 加速**。
 2. 启动 `SubtitleYC.exe`。
 3. 通过网址加载视频，或选择本地视频文件。
 4. 如果使用网址，让 SubtitleYC 自动检查可用格式；也可以选择特定格式和下载文件夹。
@@ -120,12 +122,12 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 ## 可下载的应用版本
 
-请选择包含适合你电脑的 OCR 运行环境的安装程序：
+使用联网安装程序安装应用和 CPU OCR：
 
-- `SubtitleYC-0.5.2-windows-cpu-setup.exe`：推荐所有 Windows 用户默认使用。
-- `SubtitleYC-0.5.2-windows-gpu-cuda-12.9-setup.exe`：适用于 Nvidia GTX 16 至 RTX 50 系列。
+- `SubtitleYC-0.6.0-windows-setup.exe`：安装程序自动下载并安装应用、FFmpeg 和 CPU OCR。
+- `SubtitleYC-0.6.0-windows-app.zip`、`SubtitleYC-0.6.0-ocr-cpu.zip` 和 `SubtitleYC-0.6.0-ocr-gpu-cuda-12.9.zip`：由安装程序或应用下载使用的文件，不是独立安装程序。
 
-每个捆绑安装程序只包含一个 VideOCR 运行环境。安装其他版本时会升级同一份 SubtitleYC 安装并替换原有 OCR 运行环境，避免重复占用数 GB 空间。GPU 版首次运行时会启用 GPU 加速；CPU 版则保持不可用。
+CPU OCR 随应用安装。可选 GPU 运行库存储在 `%LOCALAPPDATA%\SubtitleYC\runtimes`，更新后可继续复用。CPU 无需英伟达显卡；CUDA 12.9 需要受支持的显卡和驱动，面板会检查兼容性。安装 GPU 运行库后，请开启 GPU 加速。
 
 发布页面也包含 GitHub 自动生成的源代码压缩包。这些压缩包面向开发者，不能替代 Windows 安装程序。
 
@@ -256,10 +258,10 @@ workspace\settings.json
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.5.2"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.6.0"
 ```
 
-该矩阵要求两个版本使用相同的 VideOCR 版本号。它只编译一次 SubtitleYC，然后为每个安装程序替换捆绑的 OCR 运行环境。使用 `-ArtifactsRoot` 可以将体积较大的 `build`、`dist` 和 `release` 目录放到空间充足的驱动器；省略时则使用仓库目录。脚本会生成 CPU 和 CUDA 12.9 安装程序、本地 SHA-256 校验文件，以及将两个安装程序关联到同一次源代码构建的清单。公开 GitHub Release 只包含两个安装程序；请将校验文件和清单保留在发布记录中。若要在不移除编解码器的情况下减小软件包，请传入 FFmpeg 完整共享构建中的匹配 `ffmpeg.exe` 和 `ffprobe.exe` 路径；相邻的必要 DLL 会自动打包。当前 VideOCR 软件包请参阅 [VideOCR 发布页面](https://github.com/timminator/VideOCR/releases/latest)。
+默认构建生成一个核心安装 EXE、两个独立 OCR 运行库 ZIP，以及构建清单。脚本先打包相同版本的 CPU/GPU 运行库，再将下载地址、大小和 SHA-256 校验值嵌入应用。请将三个文件一起上传到 `v0.6.0` 发布页，再公开发布。加上 `-OfflineInstallers` 可额外构建完整离线安装 ZIP。FFmpeg 仍包含在核心安装程序中。使用 `-ArtifactsRoot` 指定空间充足的构建目录。
 
 发布构建只安装 `requirements-release.txt` 中带哈希锁定的依赖项，运行 `pip check` 和 `pip-audit`，收集第三方许可证文件，并验证输出校验值。
 
@@ -339,3 +341,6 @@ SubtitleYC 是依据 MIT 许可证发布的开源软件。在遵守 `LICENSE` �
 SubtitleYC 使用依据不同许可证发布的第三方软件，包括 VideOCR（MIT）、yt-dlp（The Unlicense）、Qt/PySide6（LGPLv3），以及 Windows 发布版本捆绑的 FFmpeg 构建（目前为 GPLv3-or-later）。完整声明、许可证文本和源代码链接请参阅 `THIRD-PARTY-NOTICES.txt` 和 `licenses` 目录。
 
 Windows 发布构建还会从实际安装的 Python 发行包中收集许可证文件并保存到 `licenses/python`，确保声明包与发布版本中打包的依赖项一致。构建也会在 `licenses/FFmpeg-build/BUILD-INFO.txt` 中记录准确的 FFmpeg 哈希、版本输出和构建配置。
+
+
+0.6.0 推荐使用核心安装 EXE，然后在应用内下载 OCR 运行库。可选离线 ZIP 需要完整解压，再运行其中的 EXE，并保留旁边的 `.bin` 文件。

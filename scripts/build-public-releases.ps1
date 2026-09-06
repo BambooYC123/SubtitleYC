@@ -1,6 +1,7 @@
 param(
-    [string]$Version = "0.5.2",
-    [string]$ReleaseLabel = "0.5.2",
+    [string]$Version = "0.6.0",
+    [string]$ReleaseLabel = "0.6.0",
+    [switch]$OfflineInstallers,
     [Parameter(Mandatory = $true)]
     [string]$CpuVideOCRCliPath,
     [Parameter(Mandatory = $true)]
@@ -22,6 +23,7 @@ if (-not $ArtifactsRoot) {
 }
 $WindowsBuildScript = Join-Path $Root "scripts\build-windows.ps1"
 $InstallerBuildScript = Join-Path $Root "scripts\build-installer.ps1"
+. (Join-Path $Root "scripts\installer-package.ps1")
 
 function Invoke-BuildScript {
     param(
@@ -29,9 +31,17 @@ function Invoke-BuildScript {
         [string[]]$Arguments
     )
 
-    & powershell -ExecutionPolicy Bypass -File $Script @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw "Release build failed with exit code $LASTEXITCODE`: $Script $($Arguments -join ' ')"
+    $previousPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell can treat harmless native stderr as terminating errors.
+        $ErrorActionPreference = "Continue"
+        & powershell -ExecutionPolicy Bypass -File $Script @Arguments
+        $buildExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($buildExitCode -ne 0) {
+        throw "Release build failed with exit code $buildExitCode`: $Script $($Arguments -join ' ')"
     }
 }
 
@@ -82,6 +92,7 @@ function Build-Edition {
             "-Version", $Version,
             "-ReleaseLabel", $ReleaseLabel,
             "-BundleExternalTools",
+            "-SplitPayload",
             "-SkipPortableZip",
             "-VideOCRVariant", $Variant,
             "-VideOCRCliPath", $VideOCRCliPath,
@@ -110,6 +121,7 @@ function Build-Edition {
         "-Version", $Version,
         "-ReleaseLabel", $ReleaseLabel,
         "-BundleExternalTools",
+        "-SplitPayload",
         "-SkipAppBuild",
         "-VideOCRVariant", $Variant,
         "-ArtifactsRoot", $ArtifactsRoot
@@ -136,8 +148,20 @@ if ($gpuCuda129Version -ne $videOCRVersion) {
 }
 Write-Host "Building SubtitleYC with VideOCR v$videOCRVersion across all editions" -ForegroundColor Cyan
 
-Build-Edition -Variant "CPU" -VideOCRCliPath $CpuVideOCRCliPath -CompileApp
-Build-Edition -Variant "GPU-CUDA-12.9" -VideOCRCliPath $GpuCuda129VideOCRCliPath
+$releaseDir = Join-Path $ArtifactsRoot "release"
+$packagePython = if ($env:SUBTITLEYC_BUILD_VENV) { Join-Path $env:SUBTITLEYC_BUILD_VENV "Scripts\python.exe" } else { "python" }
+& $packagePython (Join-Path $Root "scripts\package-runtimes.py") --cpu (Split-Path -Parent $CpuVideOCRCliPath) --gpu (Split-Path -Parent $GpuCuda129VideOCRCliPath) --output $releaseDir --release $ReleaseLabel
+if ($LASTEXITCODE -ne 0) { throw "OCR runtime packaging failed." }
+$coreArguments = @("-Version", $Version, "-ReleaseLabel", $ReleaseLabel, "-CoreInstaller", "-SkipPortableZip", "-ArtifactsRoot", $ArtifactsRoot) + (Common-SigningArguments)
+if ($FFmpegPath) { $coreArguments += @("-FFmpegPath", $FFmpegPath, "-FFprobePath", $FFprobePath) }
+Invoke-BuildScript -Script $WindowsBuildScript -Arguments $coreArguments
+$webArguments = @('-Version', $Version, '-ArtifactsRoot', $ArtifactsRoot, '-Python', $packagePython) + (Common-SigningArguments)
+if ($InnoSetupCompiler) { $webArguments += @('-InnoSetupCompiler', $InnoSetupCompiler) }
+Invoke-BuildScript -Script (Join-Path $Root 'scripts/build-web-installer.ps1') -Arguments $webArguments
+if ($OfflineInstallers) {
+    Build-Edition -Variant "CPU" -VideOCRCliPath $CpuVideOCRCliPath
+    Build-Edition -Variant "GPU-CUDA-12.9" -VideOCRCliPath $GpuCuda129VideOCRCliPath
+}
 
 $sourceFiles = @()
 foreach ($sourceInput in @(
@@ -171,9 +195,15 @@ try {
 
 $releaseDir = Join-Path $ArtifactsRoot "release"
 $expectedInstallers = @(
-    "SubtitleYC-$ReleaseLabel-windows-cpu-setup.exe",
-    "SubtitleYC-$ReleaseLabel-windows-gpu-cuda-12.9-setup.exe"
+    "SubtitleYC-$ReleaseLabel-windows-setup.exe",
+    "SubtitleYC-$ReleaseLabel-windows-app.zip",
+    "SubtitleYC-$ReleaseLabel-ocr-cpu.zip",
+    "SubtitleYC-$ReleaseLabel-ocr-gpu-cuda-12.9.zip"
 )
+if ($OfflineInstallers) { $expectedInstallers += @(
+    "SubtitleYC-$ReleaseLabel-windows-cpu-setup.zip",
+    "SubtitleYC-$ReleaseLabel-windows-gpu-cuda-12.9-setup.zip"
+) }
 $artifactRecords = foreach ($installerName in $expectedInstallers) {
     $installerPath = Join-Path $releaseDir $installerName
     $checksumPath = "$installerPath.sha256"
@@ -181,7 +211,9 @@ $artifactRecords = foreach ($installerName in $expectedInstallers) {
         -not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) {
         throw "Public build artifact is missing: $installerName"
     }
-    $signature = Get-AuthenticodeSignature -LiteralPath $installerPath
+    $signature = if ($installerName -like '*-setup.exe') { Get-AuthenticodeSignature -LiteralPath $installerPath }
+        elseif ($installerName -like '*-setup.zip') { Get-InstallerPackageSignature -Path $installerPath }
+        else { @{ Status = 'NotApplicable' } }
     [ordered]@{
         file_name = $installerName
         size_bytes = (Get-Item -LiteralPath $installerPath).Length
@@ -205,5 +237,5 @@ $publicBuildManifest | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $manif
 Write-Host ""
 Write-Host "Public release matrix complete." -ForegroundColor Green
 Write-Host "Build manifest: $manifestPath"
-Write-Host "Publish only the CPU and CUDA 12.9 setup executables; keep checksums and the build manifest with the private release records."
-Write-Host "CPU is the default download; CUDA 12.9 is for Nvidia GTX 16 through RTX 50 series."
+Write-Host "Publish the web setup EXE, app payload ZIP, and BOTH pinned runtime ZIP assets to v$ReleaseLabel. Runtime downloads require these exact URLs."
+Write-Host "Optional offline setup ZIPs can be published as alternatives. Retain checksums and the build manifest."

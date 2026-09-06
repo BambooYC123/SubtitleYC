@@ -28,6 +28,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import __release__, __version__
+from .atomic_files import save_text
+from .gpu_compatibility import gpu_compatibility
+from .runtime_manager import manager as runtime_manager
 from .logs import clear_log_entries, configure_logging, get_log_entries, install_crash_logging, log_event, record_crash
 from .security import validate_public_http_url
 from .srt import SubtitleCue, adjust_cue_timing, cues_to_ass, cues_to_srt, cues_to_txt, parse_ass, parse_srt
@@ -410,7 +413,7 @@ def _write_subtitle_output(
         content = cues_to_txt(cues)
     else:
         content = cues_to_ass(cues, title=Path(title).stem or "SubtitleYC")
-    output_path.write_text(content, encoding="utf-8")
+    save_text(output_path, content)
     return output_path, len(cues)
 
 
@@ -514,7 +517,7 @@ def _import_subtitle_cues(session_id: str, filename: str | None, text: str) -> d
     import_format, cues = _parse_imported_subtitle(filename, text)
     source_srt_path = _subtitle_storage_path(session, "srt")
     srt_text = cues_to_srt(cues)
-    source_srt_path.write_text(srt_text, encoding="utf-8")
+    save_text(source_srt_path, srt_text)
     subtitle_path, cue_count = _write_subtitle_output(
         session.id,
         srt_text,
@@ -547,7 +550,7 @@ def _save_subtitle_cues(session_id: str, request: SubtitleEditRequest) -> dict[s
     )
     source_srt_path = _subtitle_storage_path(session, "srt")
     srt_text = cues_to_srt(cues)
-    source_srt_path.write_text(srt_text, encoding="utf-8")
+    save_text(source_srt_path, srt_text)
     subtitle_path, cue_count = _write_subtitle_output(
         session.id,
         srt_text,
@@ -2163,7 +2166,7 @@ def _run_ocr_job(job_id: str, session_id: str, request: OCRRequest) -> None:
             request.timing_offset_seconds,
             request.snap_to_frame,
         )
-        source_srt_path.write_text(srt_text, encoding="utf-8")
+        save_text(source_srt_path, srt_text)
         subtitle_path, cue_count = _write_subtitle_output(
             session.id,
             srt_text,
@@ -2599,10 +2602,10 @@ def refresh_preview(session_id: str, time_seconds: float = 0.0) -> dict[str, Any
 @app.post("/api/videos/{session_id}/ocr")
 def create_ocr_job(session_id: str, request: OCRRequest) -> dict[str, Any]:
     _get_session(session_id)
-    if request.use_gpu and not find_videocr_cli(prefer_gpu=True):
+    if not find_videocr_cli(prefer_gpu=request.use_gpu):
         raise HTTPException(
             status_code=409,
-            detail="GPU acceleration is unavailable because the VideOCR GPU build is not installed.",
+            detail="Download the selected OCR runtime from OCR runtimes before starting extraction.",
         )
     job = _create_job("ocr")
     _submit_job(job, _run_ocr_job, job.id, session_id, request)
@@ -2702,6 +2705,39 @@ def _videocr_cli_version(cli_path: str | None) -> str | None:
         if match:
             return match.group(0)
     return None
+
+
+@app.get("/api/runtimes")
+def runtime_status(recheck: bool = False) -> dict[str, Any]:
+    if recheck:
+        gpu_compatibility(refresh=True)
+    return runtime_manager.snapshot()
+
+
+@app.get("/api/onboarding")
+def onboarding_status() -> dict[str, bool]:
+    return {"show_welcome": not (DATA_DIR / ".ocr-setup-seen").is_file()}
+
+
+@app.post("/api/onboarding/complete")
+def complete_onboarding() -> dict[str, bool]:
+    save_text(DATA_DIR / ".ocr-setup-seen", "1\n")
+    return {"show_welcome": False}
+
+
+@app.post("/api/runtimes/{edition}/download")
+def download_runtime(edition: str) -> dict[str, Any]:
+    try:
+        return runtime_manager.start(edition)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.post("/api/runtimes/pause")
+def pause_runtime() -> dict[str, Any]:
+    return runtime_manager.cancel()
 
 
 @app.get("/api/system")

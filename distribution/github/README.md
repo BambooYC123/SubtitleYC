@@ -12,8 +12,12 @@ preview, VideOCR, yt-dlp, and FFmpeg in one desktop workflow.
 Download the latest version from [GitHub Releases]({{REPOSITORY_URL}}/releases/tag/{{RELEASE_TAG}}).
 Do not download SubtitleYC from third-party mirrors.
 
-- **CPU installer:** Recommended for most users and works without an Nvidia GPU.
-- **GPU CUDA 12.9 installer:** Faster OCR for supported Nvidia GTX 16 through RTX 50 systems, but substantially larger.
+Download `SubtitleYC-0.6.0-windows-setup.exe` with an internet connection.
+Setup downloads and verifies the app, FFmpeg and CPU OCR, then installs them.
+CPU OCR is ready at first launch. Optional Nvidia GPU OCR is available in
+**GPU OCR**, with hardware checks, progress, and pause/resume.
+
+The app and OCR payload ZIPs are downloaded by setup or the app; use the setup EXE to install. Enable **GPU Acceleration** after the optional GPU download finishes.
 
 {{SIGNING_STATUS}}
 

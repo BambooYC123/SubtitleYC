@@ -2,7 +2,8 @@ SubtitleYC installs as a local Windows desktop app for video subtitle extraction
 
 What will be installed:
 - SubtitleYC.exe and the desktop interface files.
-- If this is the bundled installer, the tools folder also contains VideOCR and FFmpeg/ffprobe.
+- The core installer includes FFmpeg/ffprobe for video handling.
+- Web setup downloads and installs the app and CPU OCR. Internet is required during setup. GPU OCR is optional in OCR Downloads.
 - Start Menu and desktop shortcuts. These are the normal places to launch SubtitleYC.
 
 Where data is stored:
@@ -17,7 +18,8 @@ Useful controls:
 - Ctrl+S saves subtitle edits in the editor, Ctrl+U uploads subtitles, and Ctrl+E opens the subtitle editor from the main window.
 
 Notes:
-- The bundled installer is much larger because it includes the real VideOCR runtime.
+- CPU OCR is ready when web setup finishes. GPU downloads in the app require internet once and can be resumed.
+- Downloaded OCR runtimes are kept in %LOCALAPPDATA%\SubtitleYC\runtimes across updates and uninstall.
 - Only download videos you have the right to download.
 - SubtitleYC is open-source software under the MIT License.
 - The MIT License, privacy and security notices, and third-party license texts are installed beside the app.

@@ -1,7 +1,8 @@
 param(
-    [string]$Version = "0.5.2",
-    [string]$ReleaseLabel = "0.5.2",
+    [string]$Version = "0.6.0",
+    [string]$ReleaseLabel = "0.6.0",
     [switch]$BundleExternalTools,
+    [switch]$CoreInstaller,
     [switch]$SkipAppCompile,
     [switch]$SkipPortableZip,
     [ValidateSet("CPU", "GPU-CUDA-12.9")]
@@ -23,10 +24,13 @@ if (-not $ArtifactsRoot) {
 }
 New-Item -ItemType Directory -Force -Path $ArtifactsRoot | Out-Null
 $ArtifactsRoot = (Resolve-Path $ArtifactsRoot).Path
-if ($BundleExternalTools -and ([bool]$FFmpegPath -xor [bool]$FFprobePath)) {
+if (($BundleExternalTools -or $CoreInstaller) -and ([bool]$FFmpegPath -xor [bool]$FFprobePath)) {
     throw "Pass both -FFmpegPath and -FFprobePath, or omit both to use PATH."
 }
-$BuildVenv = Join-Path $Root ".build-venv"
+if ($CoreInstaller -and $BundleExternalTools) {
+    throw "Choose either -CoreInstaller or -BundleExternalTools, not both."
+}
+$BuildVenv = if ($env:SUBTITLEYC_BUILD_VENV) { $env:SUBTITLEYC_BUILD_VENV } else { Join-Path $Root ".build-venv" }
 $Python = Join-Path $BuildVenv "Scripts\python.exe"
 $PyInstaller = Join-Path $BuildVenv "Scripts\pyinstaller.exe"
 $LockFile = Join-Path $Root "requirements-release.txt"
@@ -37,11 +41,27 @@ $EditionSlug = $VideOCRVariant.ToLowerInvariant()
 $BundleSuffix = if ($BundleExternalTools) { "-$EditionSlug" } else { "" }
 $ZipPath = Join-Path $ReleaseDir "SubtitleYC-$ReleaseLabel-windows$BundleSuffix.zip"
 
+function Assert-BuildPath {
+    param([string]$Path)
+    $resolvedTarget = [IO.Path]::GetFullPath($Path)
+    $resolvedRoot = [IO.Path]::GetFullPath($ArtifactsRoot).TrimEnd('\') + '\'
+    if (-not $resolvedTarget.StartsWith($resolvedRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Build cleanup path is outside ArtifactsRoot: $resolvedTarget"
+    }
+}
+
 function Invoke-Checked {
     param([scriptblock]$Command)
-    & $Command
-    if ($LASTEXITCODE -ne 0) {
-        throw "Command failed with exit code $LASTEXITCODE"
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & $Command
+        $commandExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    if ($commandExitCode -ne 0) {
+        throw "Command failed with exit code $commandExitCode"
     }
 }
 
@@ -187,6 +207,7 @@ function Copy-LicenseBundle {
 
     $targetLicenseDir = Join-Path $TargetDistDir "licenses"
     if (Test-Path $targetLicenseDir) {
+        Assert-BuildPath $targetLicenseDir
         Remove-Item -LiteralPath $targetLicenseDir -Recurse -Force
     }
     Copy-Item -LiteralPath (Join-Path $Root "licenses") -Destination $TargetDistDir -Recurse -Force
@@ -237,10 +258,12 @@ function Copy-BundledTools {
 
     $toolsDir = Join-Path $TargetDistDir "tools"
     if (Test-Path $toolsDir) {
+        Assert-BuildPath $toolsDir
         Remove-Item -LiteralPath $toolsDir -Recurse -Force
     }
     New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
 
+    if (-not $CoreInstaller) {
     $resolvedVideOCRCli = Resolve-VideOCRCli -RequestedPath $RequestedVideOCRCliPath -Variant $VideOCRBuildVariant
     if (-not $resolvedVideOCRCli) {
         throw "VideOCR $VideOCRBuildVariant CLI was not found. Install that VideOCR edition or pass its executable with -VideOCRCliPath."
@@ -256,6 +279,7 @@ function Copy-BundledTools {
         source_cli_sha256 = (Get-FileHash -LiteralPath $resolvedVideOCRCli -Algorithm SHA256).Hash.ToLowerInvariant()
     } | ConvertTo-Json
     Set-Content -LiteralPath (Join-Path $toolsDir "videocr-build.json") -Value $buildMetadata -Encoding UTF8
+    }
 
     $ffmpegSource = Resolve-CommandSource -Name "ffmpeg" -RequestedPath $RequestedFFmpegPath
     $ffprobeSource = Resolve-CommandSource -Name "ffprobe" -RequestedPath $RequestedFFprobePath
@@ -379,7 +403,8 @@ if (-not $SkipAppCompile) {
     if (-not (Test-Path $PyInstaller)) {
         throw "PyInstaller was not installed by the release lock."
     }
-    Invoke-Checked { & $PyInstaller --clean --noconfirm --workpath $BuildDir --distpath (Join-Path $ArtifactsRoot "dist") "SubtitleYC.spec" }
+    # Module invocation also works when an existing build environment was moved.
+    Invoke-Checked { & $Python -m PyInstaller --clean --noconfirm --workpath $BuildDir --distpath (Join-Path $ArtifactsRoot "dist") "SubtitleYC.spec" }
 
     if (-not (Test-Path (Join-Path $DistDir "SubtitleYC.exe"))) {
         throw "Build failed: dist\SubtitleYC\SubtitleYC.exe was not created."
@@ -400,13 +425,14 @@ Optimize-PackagedRuntime -TargetDistDir $DistDir
 
 $DistWorkspace = Join-Path $DistDir "workspace"
 if (Test-Path $DistWorkspace) {
+    Assert-BuildPath $DistWorkspace
     Remove-Item -LiteralPath $DistWorkspace -Recurse -Force
 }
 Copy-Item -LiteralPath (Join-Path $Root "README.md") -Destination (Join-Path $DistDir "README.md") -Force
 Copy-Item -LiteralPath (Join-Path $Root "README.CN.md") -Destination (Join-Path $DistDir "README.CN.md") -Force
 Copy-LicenseBundle -TargetDistDir $DistDir -PythonExecutable $Python
 
-if ($BundleExternalTools) {
+if ($BundleExternalTools -or $CoreInstaller) {
     Copy-BundledTools -TargetDistDir $DistDir -RequestedVideOCRCliPath $VideOCRCliPath -VideOCRBuildVariant $VideOCRVariant -RequestedFFmpegPath $FFmpegPath -RequestedFFprobePath $FFprobePath
 }
 

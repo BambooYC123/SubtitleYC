@@ -1,4 +1,4 @@
-﻿name: Bug report
+name: Bug report
 description: Report a reproducible SubtitleYC problem
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
@@ -55,4 +55,3 @@ body:
           required: true
         - label: I removed private information and secrets from this report.
           required: true
-

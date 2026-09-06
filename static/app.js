@@ -763,7 +763,9 @@ function renderSystemInfo(system) {
   if (!system?.ffprobe) missing.push("ffprobe");
   if (!system?.videocr_cli) missing.push("VideOCR CLI");
   if (missing.length) {
-    elements.systemStatus.textContent = `Missing: ${missing.join(", ")}. Install VideOCR or set VIDEOCR_CLI.`;
+    elements.systemStatus.textContent = !system?.videocr_cli && system?.ffmpeg && system?.ffprobe
+      ? "Editor ready. Download an OCR runtime to enable extraction."
+      : `Missing: ${missing.join(", ")}. Open GPU OCR for setup.`;
   } else if (gpuAvailable) {
     elements.systemStatus.textContent = "ffmpeg, ffprobe, and VideOCR GPU acceleration ready.";
   } else {
@@ -1753,6 +1755,7 @@ function applySubtitlePayload(payload, options = {}) {
 }
 
 function markSubtitleDirty() {
+  state.subtitleEditRevision = (state.subtitleEditRevision || 0) + 1;
   state.subtitleDirty = true;
   renderSubtitleEditorHeader();
   updateSubtitleHistoryButtons();
@@ -2299,15 +2302,23 @@ function snapSubtitleCuesToFrames() {
   updateSubtitlePreview();
   setStatus("Snapped subtitle timings to the video frame grid", 1);
 }
-async function saveSubtitleCues() {
-  if (!state.session) return;
-  const payload = await fetchJson(`/api/videos/${state.session.id}/subtitles`, {
+const subtitleSaver = createSubtitleSaveCoordinator({
+  snapshot: () => ({ sessionId: state.session?.id, format: state.subtitleFormat, cues: editableCues(), revision: state.subtitleEditRevision || 0 }),
+  write: (data) => fetchJson(`/api/videos/${data.sessionId}/subtitles`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subtitle_format: state.subtitleFormat, cues: editableCues() }),
-  });
-  applySubtitlePayload(payload, { resetHistory: false });
-  setStatus(`Saved ${payload.cue_count || 0} subtitle cues`, 1);
+    body: JSON.stringify({ subtitle_format: data.format, cues: data.cues }),
+  }),
+  apply: (payload) => {
+    applySubtitlePayload(payload, { resetHistory: false });
+    setStatus(`Saved ${payload.cue_count || 0} subtitle cues`, 1);
+  },
+  changed: () => setStatus("Saved earlier changes; newer edits are still unsaved", 1),
+});
+installSubtitleCloseGuard({ dirty: () => state.subtitleDirty, save: () => saveSubtitleCues(), busy: () => subtitleSaver.busy });
+async function saveSubtitleCues() {
+  if (!state.session) return;
+  return subtitleSaver.save();
 }
 
 function sourceSize() {
@@ -2358,7 +2369,7 @@ function updateActionStates() {
   elements.fileInput.disabled = videoBusy || ocrActive;
   if (elements.videoOpenButton) elements.videoOpenButton.disabled = videoBusy || ocrActive;
   if (elements.keepVideoCopyInput) elements.keepVideoCopyInput.disabled = videoBusy || ocrActive;
-  elements.runButton.disabled = !hasSession || !hasCrop || !state.videocrReady || ocrActive || state.previewPreparing;
+  elements.runButton.disabled = !hasSession || !hasCrop || ocrActive || state.previewPreparing;
   elements.seekSlider.disabled = !canScrub;
   elements.playButton.disabled = !canScrub;
   elements.prevFrameButton.disabled = !canScrub;
@@ -2482,6 +2493,7 @@ function defaultCrop() {
 function updateVideoMeta() {
   if (!state.session) {
     elements.videoMeta.textContent = "No video loaded";
+    elements.videoMeta.removeAttribute("title");
     return;
   }
   const meta = state.session.metadata;
@@ -2489,6 +2501,7 @@ function updateVideoMeta() {
   const fps = Number(meta.fps || 0).toFixed(3);
   elements.videoMeta.textContent =
     `${state.session.original_name} | ${meta.width}x${meta.height} | ${fps} fps | ${duration}s`;
+  elements.videoMeta.removeAttribute("title");
 }
 
 function sessionDuration(session = state.session) {
@@ -2569,7 +2582,7 @@ function setNativePreviewVisible(visible) {
 }
 
 function nativePreviewOccluders() {
-  return [elements.logDrawer, elements.settingsDrawer, elements.libraryDrawer, elements.storageDrawer, elements.subtitleDrawer]
+  return [elements.logDrawer, elements.settingsDrawer, elements.libraryDrawer, elements.storageDrawer, elements.subtitleDrawer, document.querySelector("#videoTitleTooltip")]
     .filter((element) => element && !element.hidden)
     .map((element) => {
       const rect = element.getBoundingClientRect();
@@ -2701,6 +2714,7 @@ function nativePreviewPayload() {
   const occluders = nativePreviewOccluders();
   const showCrop = occluders.length === 0;
   return {
+    visible: !window.subtitleycModalOpen?.(),
     session_id: state.session?.id || "",
     rect: {
       left: rect.left,
@@ -2726,7 +2740,7 @@ function syncNativePreviewSurface() {
     setNativePreviewVisible(false);
     return true;
   }
-  setNativePreviewVisible(true);
+  setNativePreviewVisible(!window.subtitleycModalOpen?.());
   api(nativePreviewPayload()).catch((error) => {
     if (state.nativePreviewReady) {
       setStatus(error.message || "Native preview failed", 0);
@@ -2936,6 +2950,7 @@ function schedulePreviewScrubUi() {
   state.previewScrubUiFrame = window.requestAnimationFrame(() => {
     state.previewScrubUiFrame = null;
     updateTimeUI({ preserveSlider: true, lightweight: true });
+    if (nativePreviewEnabled()) syncNativePreviewSurface();
   });
 }
 
@@ -2987,8 +3002,7 @@ function seekTo(time, options = {}) {
   if (smoothScrub) {
     schedulePreviewScrubUi();
     if (options.refresh !== false) {
-      if (nativePreviewEnabled()) syncNativePreviewSurface();
-      else requestPreviewFrame(clamped);
+      if (!nativePreviewEnabled()) requestPreviewFrame(clamped);
     }
     return;
   }
@@ -3062,6 +3076,7 @@ function finishPreviewScrub() {
   cancelPreviewScrubUi();
   updateTimeUI();
   cancelPreviewScrubSync();
+  requestPreviewFrame(state.previewTime, { immediate: true });
   if (shouldResume && state.session && state.previewTime < sessionDuration()) {
     startPreviewPlayback();
   }
@@ -3331,7 +3346,7 @@ async function applyEditorSessionUpdate(payload = {}, options = {}) {
 
 function showSelectedLanguageStatus() {
   if (!state.videocrReady) {
-    setStatus("VideOCR CLI is missing. Install VideOCR or set VIDEOCR_CLI to videocr-cli.exe.", 0);
+    setStatus("Download an OCR runtime to enable extraction. The subtitle editor is ready to use.", 0);
   }
 }
 function setHidden(element, hidden) {
@@ -3855,6 +3870,7 @@ window.addEventListener("storage", (event) => {
   }
 });
 window.addEventListener("keydown", (event) => {
+  if (document.querySelector('dialog[open]')) return;
   if (state.confirmDialogResolve) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -4085,6 +4101,10 @@ async function uploadLocalVideoFile(file) {
 
 
 elements.runButton.addEventListener("click", async () => {
+  if (!state.videocrReady) {
+    window.openRuntimeManager();
+    return;
+  }
   try {
     if (!state.session || !state.crop || hasActiveJobKind("ocr")) return;
     const sourceSessionId = state.session.id;
@@ -4269,4 +4289,4 @@ async function init() {
   updateActionStates();
 }
 
-init();
+window.subtitleycAppReady = init();

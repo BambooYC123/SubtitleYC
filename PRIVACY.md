@@ -1,6 +1,6 @@
 # SubtitleYC Privacy Notice
 
-Effective date: 8 August 2026
+Effective date: 5 September 2026
 
 This notice describes the SubtitleYC Windows desktop application. It does not
 replace the privacy terms of websites or services that a user chooses to
@@ -8,7 +8,7 @@ access through the app.
 
 ## Short Version
 
-SubtitleYC 0.5.2 does not include accounts, advertising, analytics,
+SubtitleYC 0.6.0 does not include accounts, advertising, analytics,
 telemetry, a licence server, or automatic crash-report uploads. Videos,
 subtitles, settings, and logs are processed and stored on the user's computer.
 Nothing is sent to the SubtitleYC maintainers unless the user chooses to submit
@@ -41,6 +41,14 @@ SubtitleYC and yt-dlp contact that website and related media hosts. Those
 services can receive normal connection information such as the user's IP
 address, requested URL, and user-agent details. Their own terms and privacy
 policies apply. SubtitleYC does not operate those services.
+
+During web setup, or when you choose an optional OCR download, SubtitleYC contacts GitHub and
+its release-asset hosts. They receive connection information such as your IP
+address and the requested app/runtime URL. No videos or subtitles are uploaded by
+this download operation. Setup and the app verify packages against embedded checksums. Setup temporarily downloads the app and CPU package, installs CPU OCR with the app, and removes the temporary downloads when setup exits. The bundled CPU files are removed when the app is uninstalled.
+Downloaded OCR runtimes and resumable downloads are stored separately under
+`%LOCALAPPDATA%\SubtitleYC\runtimes`. These files are retained across app updates
+and uninstall; workspace cleanup does not remove them.
 
 SubtitleYC does not automatically check for app updates. Windows, antivirus,
 certificate, or operating-system services may independently perform their own

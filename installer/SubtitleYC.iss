@@ -1,9 +1,12 @@
 #define AppName "SubtitleYC"
+#ifdef WebInstaller
+#include WebPayloadInclude
+#endif
 #ifndef AppVersion
-#define AppVersion "0.5.2"
+#define AppVersion "0.6.0"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.5.2"
+#define AppDisplayVersion "0.6.0"
 #endif
 
 #ifndef AppEdition
@@ -16,7 +19,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.5.2-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.6.0-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"
@@ -41,6 +44,15 @@ OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}
 Compression=lzma2/ultra64
 SolidCompression=yes
+#ifdef WebInstaller
+ArchiveExtraction=full
+#endif
+#ifdef SplitPayload
+; Keep the executable small so Windows can finish checking it before showing Setup.
+DiskSpanning=yes
+DiskSliceSize=1000000000
+SlicesPerDisk=1
+#endif
 WizardStyle=modern
 ShowLanguageDialog=yes
 ArchitecturesAllowed=x64compatible
@@ -81,7 +93,12 @@ chinesesimplified.LaunchSubtitleYC=启动 SubtitleYC
 Type: filesandordirs; Name: "{app}\tools"
 
 [Files]
+#ifdef WebInstaller
+Source: "{tmp}\{#WebAppFile}"; DestDir: "{app}"; ExternalSize: {#WebAppInstalled}; Hash: "{#WebAppHash}"; Flags: external extractarchive ignoreversion recursesubdirs createallsubdirs
+Source: "{tmp}\{#WebCpuFile}"; DestDir: "{app}\tools\VideOCR"; ExternalSize: {#WebCpuInstalled}; Hash: "{#WebCpuHash}"; Flags: external extractarchive ignoreversion recursesubdirs createallsubdirs
+#else
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+#endif
 
 [Icons]
 Name: "{group}\SubtitleYC"; Filename: "{app}\SubtitleYC.exe"; WorkingDir: "{app}"
@@ -96,6 +113,49 @@ Root: HKLM; Subkey: "Software\SubtitleYC"; ValueType: string; ValueName: "Instal
 Root: HKLM; Subkey: "Software\SubtitleYC"; ValueType: string; ValueName: "InstallerVersion"; ValueData: "{#AppVersion}"; Flags: uninsdeletevalue
 
 [Code]
+#ifdef WebInstaller
+var
+  DownloadPage: TDownloadWizardPage;
+  PayloadReady: Boolean;
+
+procedure InitializeWizard;
+begin
+  DownloadPage := CreateDownloadPage('Download SubtitleYC {#AppVersion} and CPU OCR',
+    'Internet is required. CPU OCR is included in setup; GPU OCR is optional in the app.', nil);
+  DownloadPage.ShowBaseNameInsteadOfUrl := True;
+  WizardForm.ReadyLabel.Caption := 'Setup will download {#WebDownloadMiB} MiB and install SubtitleYC {#AppVersion} with CPU OCR ({#WebInstalledGiB} GiB). Internet is required. GPU OCR is optional afterward.';
+  if ActiveLanguage = 'chinesesimplified' then
+    WizardForm.ReadyLabel.Caption := '安装程序将下载 {#WebDownloadMiB} MiB，并安装 SubtitleYC {#AppVersion} 和 CPU OCR（{#WebInstalledGiB} GiB）。需要联网。GPU OCR 可稍后选装。';
+end;
+
+function DownloadPayload: String;
+var
+  FreeBytes, TotalBytes: Int64;
+begin
+  Result := '';
+  if PayloadReady then Exit;
+  if GetSpaceOnDisk64(ExpandConstant('{tmp}'), FreeBytes, TotalBytes) then
+    if FreeBytes < {#WebDownloadBytes} + 268435456 then begin
+      Result := 'Not enough temporary disk space for the downloads. Free space and retry.';
+      Exit;
+    end;
+  DownloadPage.Clear;
+  DownloadPage.Add('{#WebAppUrl}', '{#WebAppFile}', '{#WebAppHash}');
+  DownloadPage.Add('{#WebCpuUrl}', '{#WebCpuFile}', '{#WebCpuHash}');
+  DownloadPage.Show;
+  try
+    try
+      DownloadPage.Download;
+      PayloadReady := True;
+    except
+      Result := 'Download did not complete. Your existing installation has not been removed. Retry setup when ready. ' + GetExceptionMessage;
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+end;
+#endif
+
 const
   SubtitleYCUninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{B5080F3A-8E40-4D62-845A-0B6254B2FD0F}_is1';
 
@@ -132,8 +192,24 @@ var
   PreviousUninstallString: String;
   PreviousUninstaller: String;
   ResultCode: Integer;
+#ifdef WebInstaller
+  FreeBytes, TotalBytes: Int64;
+#endif
 begin
   Result := '';
+#ifdef WebInstaller
+  Result := DownloadPayload;
+  if Result <> '' then Exit;
+  { Recheck target space after downloads consume temporary space, before uninstalling. }
+  if not GetSpaceOnDisk64(AddBackslash(ExtractFileDrive(WizardDirValue)), FreeBytes, TotalBytes) then begin
+    Result := 'Could not check free space on the installation drive. Choose another location and retry.';
+    Exit;
+  end;
+  if FreeBytes - {#WebAppInstalled} < {#WebCpuInstalled} + 268435456 then begin
+    Result := 'Not enough free space on the installation drive. Setup needs {#WebInstalledGiB} GiB plus 256 MiB while the downloaded archives are held temporarily. Your existing installation has not been removed.';
+    Exit;
+  end;
+#endif
   if not QueryPreviousInstallValue('UninstallString', PreviousUninstallString) then
     Exit;
 

@@ -41,11 +41,11 @@ def authenticated_client() -> TestClient:
 
 class TestSrt(unittest.TestCase):
     def test_system_status_reports_exact_release(self):
-        self.assertEqual(__version__, "0.5.2")
-        self.assertEqual(__release__, "0.5.2")
+        self.assertEqual(__version__, "0.6.0")
+        self.assertEqual(__release__, "0.6.0")
         response = authenticated_client().get("/api/system")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["release_label"], "0.5.2")
+        self.assertEqual(response.json()["release_label"], "0.6.0")
 
     def test_download_format_limits_resolution(self):
         self.assertIn("height<=720", _download_format(720))
@@ -287,7 +287,9 @@ class TestSrt(unittest.TestCase):
             map_language("not-a-language")
 
     def test_videocr_cli_finder_prefers_gpu_build_when_requested(self):
-        with tempfile.TemporaryDirectory() as root:
+        with tempfile.TemporaryDirectory() as root, unittest.mock.patch(
+            "subtitleyc.runtime_manager.manager.installed_cli", return_value=None
+        ):
             tools = Path(root) / "tools"
             cpu = tools / "videocr-cli-CPU-v1.4.0" / "videocr-cli.exe"
             gpu = tools / "videocr-cli-GPU-v1.4.0" / "videocr-cli.exe"
@@ -302,7 +304,9 @@ class TestSrt(unittest.TestCase):
                 self.assertEqual(find_videocr_cli(prefer_gpu=False), str(cpu))
 
     def test_videocr_cli_finder_does_not_use_cpu_build_for_gpu_mode(self):
-        with tempfile.TemporaryDirectory() as root:
+        with tempfile.TemporaryDirectory() as root, unittest.mock.patch(
+            "subtitleyc.runtime_manager.manager.installed_cli", return_value=None
+        ):
             cpu = Path(root) / "tools" / "videocr-cli-CPU-v1.4.0" / "videocr-cli.exe"
             cpu.parent.mkdir(parents=True)
             cpu.touch()
@@ -323,7 +327,7 @@ class TestSrt(unittest.TestCase):
             with self.assertRaises(HTTPException) as raised:
                 create_ocr_job("test-session", request)
         self.assertEqual(raised.exception.status_code, 409)
-        self.assertIn("GPU build", str(raised.exception.detail))
+        self.assertIn("Download the selected OCR runtime", str(raised.exception.detail))
 
     def test_videocr_gpu_setting_is_forwarded_to_cli(self):
         settings = VideOCRCliSettings(

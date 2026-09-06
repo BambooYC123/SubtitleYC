@@ -1,6 +1,6 @@
 param(
-    [string]$AppVersion = "0.5.2",
-    [string]$ReleaseTag = "v0.5.2",
+    [string]$AppVersion = "0.6.0",
+    [string]$ReleaseTag = "v0.6.0",
     [Parameter(Mandatory = $true)]
     [string]$ArtifactsRoot,
     [Parameter(Mandatory = $true)]
@@ -16,6 +16,7 @@ param(
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $TemplateDir = Join-Path $Root "distribution\github"
+. (Join-Path $Root "scripts\installer-package.ps1")
 
 function Assert-HttpsUrl {
     param([string]$Name, [string]$Value)
@@ -32,7 +33,7 @@ if ([string]::IsNullOrWhiteSpace($MaintainerName) -or $MaintainerName -match '(?
 Assert-HttpsUrl -Name "SupportUrl" -Value $SupportUrl
 Assert-HttpsUrl -Name "RepositoryUrl" -Value $RepositoryUrl
 if ($ReleaseTag -notmatch '^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
-    throw "ReleaseTag must look like v0.5.2 or v0.5.2-beta.1."
+    throw "ReleaseTag must look like v0.6.0 or v0.6.0-beta.1."
 }
 $releaseLabel = $ReleaseTag.Substring(1)
 
@@ -51,8 +52,10 @@ if ([string]$manifest.release_label -ne $releaseLabel) {
 }
 
 $requiredEditions = @(
-    "SubtitleYC-$releaseLabel-windows-cpu-setup.exe",
-    "SubtitleYC-$releaseLabel-windows-gpu-cuda-12.9-setup.exe"
+    "SubtitleYC-$releaseLabel-windows-setup.exe",
+    "SubtitleYC-$releaseLabel-windows-app.zip",
+    "SubtitleYC-$($manifest.release_label)-ocr-cpu.zip",
+    "SubtitleYC-$($manifest.release_label)-ocr-gpu-cuda-12.9.zip"
 )
 $manifestNames = @($manifest.artifacts | ForEach-Object { [string]$_.file_name })
 foreach ($requiredEdition in $requiredEditions) {
@@ -61,8 +64,22 @@ foreach ($requiredEdition in $requiredEditions) {
     }
 }
 
-if ($manifestNames.Count -ne $requiredEditions.Count) {
-    throw "The public build manifest must contain exactly the CPU and CUDA 12.9 installers."
+if ($manifestNames.Count -notin @(4, 6)) {
+    throw "The public build manifest must contain the web installer, app payload and both runtimes, with optional offline installers."
+}
+$allowedNames = $requiredEditions + @("SubtitleYC-$releaseLabel-windows-cpu-setup.zip", "SubtitleYC-$releaseLabel-windows-gpu-cuda-12.9-setup.zip")
+if (@($manifestNames | Select-Object -Unique).Count -ne $manifestNames.Count -or @($manifestNames | Where-Object { $_ -notin $allowedNames }).Count) {
+    throw "The build manifest contains duplicate or unexpected release assets."
+}
+$catalog = Get-Content (Join-Path $Root "assets\runtime-catalog.json") -Raw | ConvertFrom-Json
+foreach ($edition in @('cpu', 'gpu-cuda-12.9')) {
+    $item = $catalog.$edition
+    $fileName = "SubtitleYC-$($manifest.release_label)-ocr-$edition.zip"
+    $record = $manifest.artifacts | Where-Object { $_.file_name -eq $fileName }
+    if ($item.sha256 -ne $record.sha256 -or $item.size_bytes -ne $record.size_bytes -or
+        $item.url -ne "$($RepositoryUrl.TrimEnd('/'))/releases/download/$ReleaseTag/$fileName") {
+        throw "The embedded runtime catalog does not match the release assets or destination URLs."
+    }
 }
 
 $destinationPath = [IO.Path]::GetFullPath($Destination)
@@ -93,6 +110,16 @@ Copy-Item -LiteralPath (Join-Path $TemplateDir ".github") -Destination $reposito
 
 $allSigned = $true
 
+$webPins = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $manifestPath) 'WEB-INSTALLER-PAYLOAD.json') -Raw | ConvertFrom-Json
+foreach ($kind in @('App', 'Cpu')) {
+    $file = $webPins.('Web' + $kind + 'File')
+    $record = $manifest.artifacts | Where-Object { $_.file_name -eq $file }
+    if (-not $record -or $record.sha256 -ne $webPins.('Web' + $kind + 'Hash') -or
+        $webPins.('Web' + $kind + 'Url') -ne "$($RepositoryUrl.TrimEnd('/'))/releases/download/$ReleaseTag/$file") {
+        throw 'The web installer payload pins do not match the release assets or destination URLs.'
+    }
+}
+
 foreach ($artifact in @($manifest.artifacts)) {
     $fileName = [string]$artifact.file_name
     $sourcePath = Join-Path (Split-Path -Parent $manifestPath) $fileName
@@ -110,7 +137,14 @@ foreach ($artifact in @($manifest.artifacts)) {
     if ($actualHash -ne ([string]$artifact.sha256).ToLowerInvariant() -or $actualHash -ne $checksumHash) {
         throw "SHA-256 verification failed for $fileName."
     }
-    $signature = Get-AuthenticodeSignature -LiteralPath $sourcePath
+    if ($fileName -like '*-setup.exe') {
+        $signature = Get-AuthenticodeSignature -LiteralPath $sourcePath
+    } elseif ($fileName -like '*-setup.zip') {
+        $signature = Get-InstallerPackageSignature -Path $sourcePath
+    } else {
+        Copy-Item -LiteralPath $sourcePath -Destination $releaseAssetsDir -Force
+        continue
+    }
     if ($signature.Status -ne [System.Management.Automation.SignatureStatus]::Valid) {
         $allSigned = $false
         if (-not $AllowUnsigned) {
