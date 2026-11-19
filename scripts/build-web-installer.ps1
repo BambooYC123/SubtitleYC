@@ -1,5 +1,5 @@
 param(
-    [string]$Version = '0.6.0',
+    [string]$Version = '0.7.0',
     [string]$ArtifactsRoot,
     [string]$InnoSetupCompiler = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
     [string]$Python = "$env:SUBTITLEYC_BUILD_VENV\Scripts\python.exe",

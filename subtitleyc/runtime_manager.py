@@ -259,6 +259,11 @@ class RuntimeManager:
                 return
             if staging.exists():
                 shutil.rmtree(staging)
+            target = self.target(edition)
+            if target.exists():
+                # Not a usable install (checked above), e.g. antivirus removed a file.
+                # Clear it now rather than failing after the whole download.
+                shutil.rmtree(target)
             required = self.required_space(edition)
             if shutil.disk_usage(self.root).free < required:
                 raise ValueError(f"Not enough disk space. Free at least {required / 1024**3:.1f} GB and retry.")
@@ -277,9 +282,6 @@ class RuntimeManager:
             self._extract(item, partial, staging)
             self._check_cancel()
             (staging / ".complete").write_text(item["sha256"])
-            target = self.target(edition)
-            if target.exists():
-                raise ValueError("An incomplete runtime folder exists. Restart the app and contact support.")
             staging.rename(target)
             partial.unlink(missing_ok=True)
             self._update(status="ready", error=None)

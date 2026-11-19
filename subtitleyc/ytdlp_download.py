@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .process import install_hidden_yt_dlp_subprocesses, popen_hidden_subprocess
+from .process import install_hidden_yt_dlp_subprocesses, popen_hidden_subprocess, stop_process_tree
 from .security import public_network_only, validate_public_http_url
 
 
@@ -248,12 +248,7 @@ def download_in_subprocess(
         last_progress_stamp = -1
         while process.poll() is None:
             if cancel_event is not None and cancel_event.is_set():
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=5)
+                stop_process_tree(process)
                 raise YtDlpDownloadCancelled("Download cancelled")
 
             try:
@@ -287,12 +282,8 @@ def download_in_subprocess(
                 error += " The download engine crashed, but SubtitleYC remained open."
         raise RuntimeError(error)
     finally:
-        if process is not None and process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.kill()
+        # Stops the worker and any FFmpeg merge it started (cancel, disk-full, or an error above).
+        stop_process_tree(process, timeout=2)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
 

@@ -13,7 +13,7 @@ SubtitleYC is an open-source Windows desktop app for extracting, reviewing, and 
 
 ## Download
 
-Download Windows builds from [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases). Version 0.6.0 uses a small Windows web setup EXE. Setup downloads and installs the app, FFmpeg, and CPU OCR. CPU OCR is ready at first launch; Nvidia GPU OCR is optional in GPU OCR.
+Download Windows builds from [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases). Version 0.7.0 uses a small Windows web setup EXE. Setup downloads and installs the app, FFmpeg, and CPU OCR. CPU OCR is ready at first launch; Nvidia GPU OCR is optional in GPU OCR.
 
 The installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
 
@@ -29,19 +29,19 @@ Download a video URL, open a local video, or resume one of your recent projects.
 
 ### 2. Define The Subtitle Region And Run OCR
 
-Drag the crop box over the burned-in captions, choose the recognition language and output format, then run VideOCR. The activity panel shows extraction progress while the native preview remains available for frame checks.
+Drag the crop box over the burned-in captions, choose the recognition language and output format, then run VideOCR. Pick a Fast, Balanced or Accurate profile, or change any value yourself. The bar at the bottom shows extraction progress, and the timeline under the video lets you drag IN and OUT markers to limit the range that is read.
 
 ![SubtitleYC extracting subtitles from the selected video region](docs/screenshots/02-ocr-workflow.png)
 
 ### 3. Review, Correct, And Export
 
-Open SubtitleYC Editor to inspect every cue alongside the video. You can adjust cue text and timing, step through individual frames, add or remove cues, save your changes, and export the finished subtitle file.
+Switch to **Edit** to inspect every cue alongside the video. You can adjust cue text and timing, drag a cue's edges on the timeline, step through individual frames, find and replace text, add or remove cues, save your changes, and export the finished subtitle file. Cues that are too fast, overlapping or empty are flagged.
 
 ![SubtitleYC Editor reviewing subtitle cues against the video](docs/screenshots/03-subtitle-editor.png)
 
 ## Quick Start
 
-1. Download and run `SubtitleYC-0.6.0-windows-setup.exe` while connected to the internet. Setup installs CPU OCR automatically. Open **GPU OCR** later if you want optional Nvidia GPU acceleration.
+1. Download and run `SubtitleYC-0.7.0-windows-setup.exe` while connected to the internet. Setup installs CPU OCR automatically. Open **GPU OCR** later if you want optional Nvidia GPU acceleration.
 2. Launch `SubtitleYC.exe`.
 3. Load a video from a URL or choose a local video file.
 4. For a URL, let SubtitleYC auto-check available formats, optionally choose a specific format, and choose a download folder.
@@ -90,7 +90,7 @@ Supported output formats:
 
 ### Editing Subtitles
 
-Use `SubtitleYC Editor` to open the editor. From there you can:
+Use the `Edit` tab or the `Edit subtitles` button to open the editor. From there you can:
 
 - Edit cue text, start time, and end time.
 - Apply bold, italic, underline, or text colour styling to selected text or a whole cue.
@@ -107,7 +107,7 @@ The preview controls below the video can also nudge the currently visible or sel
 
 ### Importing Subtitles
 
-Use `Upload Subtitles` to attach an existing timed subtitle file to the current video. When downloading from a URL, open `Video URL subtitles` to check available site captions or auto-captions; SubtitleYC converts downloaded captions to `.srt` when possible and can attach one matching subtitle track to the session or download it separately.
+Use `Upload subtitles` to attach an existing timed subtitle file (`.srt`, `.ass` or `.vtt`) to the current video. When downloading from a URL, open `Download options` to check available site captions or auto-captions; SubtitleYC converts downloaded captions to `.srt` when possible and can attach one matching subtitle track to the session or download it separately.
 
 Import supports:
 
@@ -119,7 +119,7 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 ## Downloadable App
 
-Download `SubtitleYC-0.6.0-windows-setup.exe` for normal installation. It downloads and installs the app, FFmpeg, and CPU OCR during setup. Optional GPU OCR is available in **GPU OCR**.
+Download `SubtitleYC-0.7.0-windows-setup.exe` for normal installation. It downloads and installs the app, FFmpeg, and CPU OCR during setup. Optional GPU OCR is available in **GPU OCR**.
 
 - **CPU** works without an Nvidia GPU.
 - **GPU CUDA 12.9** requires a supported Nvidia GTX 16 through RTX 50 GPU and compatible driver.
@@ -127,7 +127,7 @@ Download `SubtitleYC-0.6.0-windows-setup.exe` for normal installation. It downlo
 - CPU OCR is installed with the app. Optional downloaded runtimes are stored in `%LOCALAPPDATA%\SubtitleYC\runtimes`, separate from workspace cleanup, and reused across app updates when unchanged.
 - After the GPU download finishes, turn on **GPU Acceleration** in OCR settings.
 
-The `SubtitleYC-0.6.0-ocr-*.zip` release assets are downloaded by setup or the app; users normally do not need to open them manually.
+The `SubtitleYC-0.7.0-ocr-*.zip` release assets are downloaded by setup or the app; users normally do not need to open them manually.
 
 The release page also includes source archives generated automatically by GitHub. Those archives are intended for developers and are not substitutes for the Windows installers.
 
@@ -236,7 +236,7 @@ workspace\videocr-runtime
 workspace\settings.json
 ```
 
-Use `Logs` to inspect app, download, OCR, and error messages. Use `Storage` to review and clear generated files that SubtitleYC can safely recreate.
+Use `Logs` (under the `⋯` menu, or `View logs` on a failed job) to inspect app, download, OCR, and error messages. Use `Storage` to review and clear generated files that SubtitleYC can safely recreate.
 
 ## Build Windows Releases
 
@@ -265,10 +265,10 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.6.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.7.0"
 ```
 
-The default public build produces a small web setup EXE, an app payload ZIP, two runtime ZIPs, and a build manifest. It packages matching CPU/GPU runtimes first and embeds their exact versioned GitHub URLs, sizes, and SHA-256 hashes in the app. Upload **all four assets to the same `v0.6.0` release** before publishing; the app cannot download unpublished assets. Add `-OfflineInstallers` to also build the complete offline installer ZIPs. Existing downloaded runtimes are reused across app updates. See [runtime distribution](docs/runtime-downloads.md) for details. FFmpeg and ffprobe remain bundled with the core app.
+The default public build produces a small web setup EXE, an app payload ZIP, two runtime ZIPs, and a build manifest. It packages matching CPU/GPU runtimes first and embeds their exact versioned GitHub URLs, sizes, and SHA-256 hashes in the app. Upload **all four assets to the same `v0.7.0` release** before publishing; the app cannot download unpublished assets. Add `-OfflineInstallers` to also build the complete offline installer ZIPs. Existing downloaded runtimes are reused across app updates. See [runtime distribution](docs/runtime-downloads.md) for details. FFmpeg and ffprobe remain bundled with the core app.
 
 Release builds install only hashes pinned in `requirements-release.txt`, run `pip check` and `pip-audit`, collect third-party license files, and verify output checksums.
 
@@ -311,7 +311,7 @@ Start-SubtitleYC.bat
 ## Test
 
 ```powershell
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 python -m compileall subtitleyc tests
 ```
 

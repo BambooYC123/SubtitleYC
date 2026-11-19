@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.6.0",
-    [string]$ReleaseLabel = "0.6.0",
+    [string]$Version = "0.7.0",
+    [string]$ReleaseLabel = "0.7.0",
     [switch]$OfflineInstallers,
     [Parameter(Mandatory = $true)]
     [string]$CpuVideOCRCliPath,

@@ -45,6 +45,44 @@ def popen_hidden_subprocess(*args: Any, **kwargs: Any) -> subprocess.Popen[Any]:
     return subprocess.Popen(*args, **hidden_subprocess_kwargs(**kwargs))
 
 
+def stop_process_tree(process: subprocess.Popen[Any] | None, timeout: float = 5.0) -> None:
+    """Stop a child process together with anything it spawned.
+
+    ``Popen.terminate`` only ends the direct child on Windows. VideOCR runs
+    PaddleOCR as a separate executable and yt-dlp runs FFmpeg, so a plain
+    terminate leaves those running after a cancel.
+    """
+
+    if process is None or process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        try:
+            # Must run while the parent is alive so its children can still be found.
+            run_hidden_subprocess(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=timeout,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    if process.poll() is None:
+        try:
+            process.terminate()
+        except OSError:
+            pass
+    try:
+        process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:
+            process.kill()
+            process.wait(timeout=timeout)
+        except (OSError, subprocess.SubprocessError):
+            pass
+
+
 def install_hidden_yt_dlp_subprocesses() -> None:
     if sys.platform != "win32":
         return

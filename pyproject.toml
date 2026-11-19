@@ -1,6 +1,6 @@
 [project]
 name = "subtitleyc"
-version = "0.6.0"
+version = "0.7.0"
 description = "Open-source Windows app for extracting, reviewing, and editing subtitles from burned-in video captions."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "av>=17,<18",
-    "pillow>=12.3,<13",
+    "pillow>=13,<14",
     "fastapi>=0.115,<1",
     "pydantic>=2,<3",
     "python-multipart>=0.0.9,<1",
@@ -24,7 +24,7 @@ dependencies = [
     "PySide6>=6.11.1,<6.12",
     "pywebview>=6.2.1,<7",
     "uvicorn[standard]>=0.30,<1",
-    "yt-dlp>=2026.7.4",
+    "yt-dlp>=2026.10.26",
 ]
 
 [project.urls]

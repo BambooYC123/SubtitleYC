@@ -23,7 +23,7 @@ from PySide6.QtWebEngineCore import (
     QWebEngineUrlRequestInterceptor,
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QStyle, QTabBar, QTabWidget, QToolButton, QWidget
+from PySide6.QtWidgets import QApplication, QFileDialog, QMainWindow, QMessageBox, QTabWidget, QToolTip, QWidget
 
 from .native_video import NativeVideoDecoder
 
@@ -76,6 +76,7 @@ BRIDGE_SCRIPT = r"""
         "update_native_preview",
         "set_native_preview_visible",
         "open_subtitle_editor",
+        "show_main_view",
         "set_shell_theme",
         "set_shell_language",
         "open_file_location"
@@ -193,6 +194,23 @@ def _qimage_from_pil(image: Image.Image) -> QImage:
     return QImage(data, width, height, width * 3, QImage.Format.Format_RGB888).copy()
 
 
+def _with_required_suffix(target: Path, suffix: str) -> Path:
+    """Append the extension rather than replace one: "Show.S01E02" must not become "Show.srt"."""
+
+    if target.suffix.casefold() == suffix.casefold():
+        return target
+    return target.with_name(target.name + suffix)
+
+
+# The viewer is a dark stage. The picture keeps its own shape inside it, inset by
+# STAGE_PADDING and outlined, so it is clear where the video ends.
+STAGE_COLOR = "#05080b"
+STAGE_PADDING = 12
+FRAME_BORDER_COLOR = "#3b4958"
+CROP_COLOR = QColor(45, 212, 191)
+CROP_HANDLE = 7
+
+
 class NativePreviewSurface(QWidget):
     crop_changed = Signal(str)
     subtitle_box_changed = Signal(str)
@@ -266,12 +284,20 @@ class NativePreviewSurface(QWidget):
             self.update()
             return
         video_path = str(session.get("video_path") or "")
-        self.decoder = NativeVideoDecoder(
-            video_path,
-            self.metadata,
-            preview_cache_dir=_preview_cache_dir(self.session_id),
-            cache_limit=self.cache_idle_limit,
-        )
+        try:
+            self.decoder = NativeVideoDecoder(
+                video_path,
+                self.metadata,
+                preview_cache_dir=_preview_cache_dir(self.session_id),
+                cache_limit=self.cache_idle_limit,
+            )
+        except Exception:
+            # Forget the session so the next sync retries instead of reporting success
+            # with no decoder while this surface covers the web preview.
+            self.session_id = ""
+            self.session = None
+            self.hide()
+            raise
         if not self.isVisible():
             self.show()
 
@@ -364,9 +390,14 @@ class NativePreviewSurface(QWidget):
         if not self.decoder or self.width() <= 1 or self.height() <= 1:
             return
         try:
-            image, frame_index = self.decoder.get_frame(self.frame_index, (self.width(), self.height()))
+            scale = max(1.0, float(self.devicePixelRatioF()))
+            inner_width = max(2, self.width() - 2 * STAGE_PADDING)
+            inner_height = max(2, self.height() - 2 * STAGE_PADDING)
+            device_size = (round(inner_width * scale), round(inner_height * scale))
+            image, frame_index = self.decoder.get_frame(self.frame_index, device_size)
             self.frame_index = frame_index
             self.pixmap = QPixmap.fromImage(_qimage_from_pil(image))
+            self.pixmap.setDevicePixelRatio(scale)
             self.last_error = ""
         except Exception as exc:  # noqa: BLE001 - surface decode failures in the preview panel.
             self.last_error = str(exc)
@@ -378,7 +409,7 @@ class NativePreviewSurface(QWidget):
 
     def paintEvent(self, _event: Any) -> None:  # noqa: N802 - Qt override name.
         painter = QPainter(self)
-        painter.fillRect(self.rect(), QColor("#111827"))
+        painter.fillRect(self.rect(), QColor(STAGE_COLOR))
         if self.last_error:
             painter.setPen(QColor("#cbd5e1"))
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.last_error)
@@ -388,10 +419,18 @@ class NativePreviewSurface(QWidget):
             painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Load a video")
             return
 
-        x = (self.width() - self.pixmap.width()) // 2
-        y = (self.height() - self.pixmap.height()) // 2
-        self.image_rect = QRect(x, y, self.pixmap.width(), self.pixmap.height())
+        # Logical size: the pixmap holds device pixels on scaled displays.
+        logical = self.pixmap.deviceIndependentSize()
+        image_width = min(self.width(), max(1, round(logical.width())))
+        image_height = min(self.height(), max(1, round(logical.height())))
+        x = (self.width() - image_width) // 2
+        y = (self.height() - image_height) // 2
+        self.image_rect = QRect(x, y, image_width, image_height)
         painter.drawPixmap(self.image_rect, self.pixmap)
+        painter.setPen(QPen(QColor("#000000"), 1))
+        painter.drawRect(self.image_rect.adjusted(-2, -2, 1, 1))
+        painter.setPen(QPen(QColor(FRAME_BORDER_COLOR), 1))
+        painter.drawRect(self.image_rect.adjusted(-1, -1, 0, 0))
         self._draw_crop(painter)
         self._draw_subtitle(painter)
 
@@ -399,10 +438,26 @@ class NativePreviewSurface(QWidget):
         if not self.show_crop or not self.crop:
             return
         rect = self._crop_to_widget(self.crop)
-        painter.fillRect(rect, QColor(20, 184, 166, 36))
-        pen = QPen(QColor(20, 184, 166, 240), 2)
-        painter.setPen(pen)
-        painter.drawRect(rect)
+        painter.fillRect(rect, QColor(45, 212, 191, 22))
+        painter.setPen(QPen(CROP_COLOR, 1))
+        painter.drawRect(rect.adjusted(0, 0, -1, -1))
+        # Square corner handles and a size tag: this is a precision tool.
+        half = CROP_HANDLE // 2
+        for corner_x in (rect.left(), rect.right()):
+            for corner_y in (rect.top(), rect.bottom()):
+                painter.fillRect(QRect(corner_x - half, corner_y - half, CROP_HANDLE, CROP_HANDLE), CROP_COLOR)
+        label = f"{self.crop['width']} \u00d7 {self.crop['height']}"
+        font = QFont(painter.font())
+        font.setPixelSize(11)
+        font.setBold(True)
+        painter.setFont(font)
+        metrics = painter.fontMetrics()
+        tag = QRect(rect.left(), rect.top() - 18, metrics.horizontalAdvance(label) + 12, 18)
+        if tag.top() < self.image_rect.top():
+            tag.moveTop(rect.top())
+        painter.fillRect(tag, CROP_COLOR)
+        painter.setPen(QColor("#03211e"))
+        painter.drawText(tag, Qt.AlignmentFlag.AlignCenter, label)
 
     def _normalized_subtitle_box(self, value: Any) -> dict[str, float] | None:
         if not isinstance(value, dict):
@@ -622,6 +677,7 @@ BRIDGE_ALLOWED_METHODS = frozenset(
         "update_native_preview",
         "set_native_preview_visible",
         "open_subtitle_editor",
+        "show_main_view",
         "set_shell_theme",
         "set_shell_language",
         "open_file_location",
@@ -794,9 +850,7 @@ class QtDesktopBridge(QObject):
         )
         if not selected:
             return {"ok": False, "cancelled": True}
-        target = Path(selected)
-        if target.suffix.casefold() != ".srt":
-            target = target.with_suffix(".srt")
+        target = _with_required_suffix(Path(selected), ".srt")
         return {"ok": True, "path": str(target)}
 
     def open_file_location(self, target_path: str = "") -> dict[str, object]:
@@ -834,9 +888,7 @@ class QtDesktopBridge(QObject):
         )
         if not selected:
             return {"ok": False, "cancelled": True}
-        target = Path(selected)
-        if target.suffix.casefold() != suffix:
-            target = target.with_suffix(suffix)
+        target = _with_required_suffix(Path(selected), suffix)
         with urllib.request.urlopen(self._request(subtitle_url), timeout=30) as response:
             target.write_bytes(response.read())
         return {"ok": True, "path": str(target), "format": suffix.lstrip(".")}
@@ -861,6 +913,11 @@ class QtDesktopBridge(QObject):
     def open_subtitle_editor(self, session_id: str = "", time_seconds: float = 0.0) -> dict[str, object]:
         self.window.open_subtitle_editor_tab(str(session_id or ""), float(time_seconds or 0.0))
         return {"ok": True}
+
+    def show_main_view(self) -> dict[str, object]:
+        self.window.show_main_view()
+        return {"ok": True}
+
     def set_shell_theme(self, theme: str = "dark") -> dict[str, object]:
         self.window.apply_shell_theme(str(theme or "dark"))
         return {"ok": True, "theme": self.window.shell_theme}
@@ -940,6 +997,8 @@ class QtDesktopWindow(QMainWindow):
         self.tabs.setDocumentMode(False)
         self.tabs.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.tabs.tabBar().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        # Extract and Edit are switched from the top bar inside each page.
+        self.tabs.tabBar().hide()
         self.shell_theme = "dark"
         self.shell_language = "en"
         self.apply_shell_theme("dark")
@@ -948,9 +1007,7 @@ class QtDesktopWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
 
         self.container = QWidget(self.tabs)
-        main_tab_index = self.tabs.addTab(self.container, "SubtitleYC")
-        self.tabs.tabBar().setTabButton(main_tab_index, QTabBar.ButtonPosition.LeftSide, None)
-        self.tabs.tabBar().setTabButton(main_tab_index, QTabBar.ButtonPosition.RightSide, None)
+        self.tabs.addTab(self.container, "SubtitleYC")
         self.container.installEventFilter(self)
         self.container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.container.setStyleSheet(f"background-color: {_theme_background(self.shell_theme)};")
@@ -1004,28 +1061,34 @@ class QtDesktopWindow(QMainWindow):
             colors = {
                 "app_bg": "#eef2f6",
                 "row_bg": "#eef2f6",
-                "tab_bg": "#eef2f6",
+                "tab_bg": "#ffffff",
                 "active_bg": "#ffffff",
-                "hover_bg": "#f8fafb",
-                "line": "#d7dee7",
-                "text": "#1f2328",
-                "muted": "#66707c",
+                "hover_bg": "#f3f6f9",
+                "line": "#d5dce5",
+                "text": "#1a2027",
+                "muted": "#5f6b79",
             }
         else:
             colors = {
                 "app_bg": "#0d131a",
-                "row_bg": "#141c25",
+                "row_bg": "#0d131a",
                 "tab_bg": "#141c25",
-                "active_bg": "#192331",
-                "hover_bg": "#192331",
-                "line": "#2b3948",
-                "text": "#e7edf5",
-                "muted": "#98a6b7",
+                "active_bg": "#171f29",
+                "hover_bg": "#171f29",
+                "line": "#27323e",
+                "text": "#eef2f6",
+                "muted": "#8e9bab",
             }
         self.setStyleSheet(
             f"""
             QMainWindow {{
                 background: {colors['row_bg']};
+            }}
+            QToolTip {{
+                background-color: {colors['active_bg']};
+                color: {colors['text']};
+                border: 1px solid {colors['line']};
+                padding: 4px 7px;
             }}
             QComboBox,
             QAbstractItemView,
@@ -1050,7 +1113,10 @@ class QtDesktopWindow(QMainWindow):
             palette.setColor(QPalette.ColorRole.ButtonText, QColor(colors["text"]))
             palette.setColor(QPalette.ColorRole.Highlight, QColor(colors["hover_bg"]))
             palette.setColor(QPalette.ColorRole.HighlightedText, QColor(colors["text"]))
+            palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(colors["active_bg"]))
+            palette.setColor(QPalette.ColorRole.ToolTipText, QColor(colors["text"]))
             app.setPalette(palette)
+            QToolTip.setPalette(palette)
         self.tabs.setStyleSheet(
             f"""
             QTabWidget {{
@@ -1058,61 +1124,7 @@ class QtDesktopWindow(QMainWindow):
             }}
             QTabWidget::pane {{
                 border: 0;
-                border-top: 1px solid {colors['line']};
                 background: {colors['app_bg']};
-                top: -1px;
-            }}
-            QTabWidget::tab-bar {{
-                alignment: left;
-            }}
-            QTabBar {{
-                background: {colors['row_bg']};
-                border-bottom: 1px solid {colors['line']};
-            }}
-            QTabBar::tab {{
-                width: 158px;
-                min-width: 158px;
-                max-width: 158px;
-                min-height: 22px;
-                padding: 4px 12px;
-                margin: 4px 2px 0 2px;
-                border: 1px solid transparent;
-                border-bottom-color: {colors['line']};
-                border-top-left-radius: 9px;
-                border-top-right-radius: 9px;
-                background: {colors['tab_bg']};
-                color: {colors['muted']};
-                font-weight: 700;
-            }}
-            QTabBar::tab:hover {{
-                background: {colors['hover_bg']};
-                border-color: {colors['line']};
-                border-bottom-color: {colors['line']};
-                color: {colors['text']};
-            }}
-            QTabBar::tab:selected {{
-                background: {colors['active_bg']};
-                border-color: {colors['line']};
-                border-bottom-color: {colors['active_bg']};
-                color: {colors['text']};
-            }}
-            QTabBar::close-button {{
-                width: 14px;
-                height: 14px;
-                margin: 0 7px 0 4px;
-                subcontrol-position: right;
-            }}
-            QToolButton#subtitleycTabCloseButton {{
-                width: 20px;
-                height: 20px;
-                margin: 0 6px 0 2px;
-                padding: 0;
-                border: 0;
-                border-radius: 4px;
-                background: transparent;
-            }}
-            QToolButton#subtitleycTabCloseButton:hover {{
-                background: {colors['hover_bg']};
             }}
             """
         )
@@ -1129,19 +1141,6 @@ class QtDesktopWindow(QMainWindow):
 
     def apply_shell_language(self, language: str = "en") -> None:
         self.shell_language = "zh-CN" if language == "zh-CN" else "en"
-        editor_label = "SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "SubtitleYC Editor"
-        close_label = "关闭 SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "Close SubtitleYC Editor"
-        for index in range(self.tabs.count()):
-            widget = self.tabs.widget(index)
-            if widget is self.container:
-                self.tabs.setTabText(index, "SubtitleYC")
-                continue
-            if isinstance(widget, EditorPreviewTab):
-                self.tabs.setTabText(index, editor_label)
-                button = self.tabs.tabBar().tabButton(index, QTabBar.ButtonPosition.RightSide)
-                if isinstance(button, QToolButton):
-                    button.setToolTip(close_label)
-                    button.setAccessibleName(close_label)
         language_json = json.dumps(self.shell_language)
         script = f"window.subtitleycApplyExternalLanguage && window.subtitleycApplyExternalLanguage({language_json});"
         for editor in list(self.editor_tabs.values()):
@@ -1236,18 +1235,6 @@ class QtDesktopWindow(QMainWindow):
 
         check(0)
 
-    def _make_tab_close_button(self, editor: EditorPreviewTab) -> QToolButton:
-        button = QToolButton(self.tabs.tabBar())
-        button.setObjectName("subtitleycTabCloseButton")
-        button.setAutoRaise(True)
-        button.setFixedSize(28, 20)
-        button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton))
-        close_label = "关闭 SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "Close SubtitleYC Editor"
-        button.setToolTip(close_label)
-        button.setAccessibleName(close_label)
-        button.clicked.connect(lambda _checked=False: self.close_tab(self.tabs.indexOf(editor)))
-        return button
-
     def on_current_tab_changed(self, _index: int) -> None:
         widget = self.tabs.currentWidget()
         if widget is self.container:
@@ -1257,24 +1244,35 @@ class QtDesktopWindow(QMainWindow):
         if isinstance(widget, EditorPreviewTab):
             widget.sync_geometry()
 
+    def show_main_view(self) -> None:
+        self.tabs.setCurrentWidget(self.container)
+
     def open_subtitle_editor_tab(self, session_id: str = "", time_seconds: float = 0.0) -> None:
         clean_session_id = str(session_id or "")
-        key = f"subtitle-editor:{clean_session_id or 'empty'}"
+        # A single editor view is reused for every video, so hidden views never pile up.
+        key = "subtitle-editor"
         editor = self.editor_tabs.get(key)
         if editor is None or self.tabs.indexOf(editor) < 0:
             editor = EditorPreviewTab(self, clean_session_id)
             self.editor_tabs[key] = editor
-            editor_label = "SubtitleYC 编辑器" if self.shell_language == "zh-CN" else "SubtitleYC Editor"
-            tab_index = self.tabs.addTab(editor, editor_label)
-            close_button = self._make_tab_close_button(editor)
-            self.tabs.tabBar().setTabButton(tab_index, QTabBar.ButtonPosition.RightSide, close_button)
+            tab_index = self.tabs.addTab(editor, "SubtitleYC Editor")
+            existing_tab = False
         else:
             tab_index = self.tabs.indexOf(editor)
+            existing_tab = True
         if clean_session_id:
             query = urllib.parse.urlencode({"session": clean_session_id, "time": f"{float(time_seconds or 0.0):.6f}"})
-            editor.set_editor_url(f"{self.base_url}/editor?{query}")
+            editor_url = f"{self.base_url}/editor?{query}"
         else:
-            editor.set_editor_url(f"{self.base_url}/editor")
+            editor_url = f"{self.base_url}/editor"
+        if existing_tab:
+            # Reload only when the open editor has nothing unsaved; otherwise just show it.
+            editor.web.page().runJavaScript(
+                "(function(){var s=window.subtitleycCloseState?window.subtitleycCloseState():{dirty:false,busy:false};"
+                f"if(!s.dirty&&!s.busy){{window.location.replace({json.dumps(editor_url)});}}}})();"
+            )
+        else:
+            editor.set_editor_url(editor_url)
         self.tabs.setCurrentIndex(tab_index)
         QTimer.singleShot(0, editor.sync_geometry)
     def resizeEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name.
@@ -1289,10 +1287,35 @@ class QtDesktopWindow(QMainWindow):
         script = f"window.subtitleycNativePreviewSubtitleBoxChanged && window.subtitleycNativePreviewSubtitleBoxChanged({box_json});"
         self.web.page().runJavaScript(script)
 
+    def _confirm_stop_running_jobs(self) -> bool:
+        """Closing stops any running download or OCR, so ask before throwing that work away."""
+
+        try:
+            from .main import _has_active_jobs
+
+            if not _has_active_jobs():
+                return True
+        except Exception:  # noqa: BLE001 - never block closing on a status check.
+            return True
+        chinese = self.shell_language == "zh-CN"
+        choice = QMessageBox.warning(
+            self,
+            "SubtitleYC",
+            "下载或 OCR 任务仍在运行。关闭 SubtitleYC 将停止该任务。是否仍要关闭？"
+            if chinese
+            else "A download or OCR job is still running. Closing SubtitleYC will stop it. Close anyway?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return choice == QMessageBox.StandardButton.Yes
+
     def closeEvent(self, event: Any) -> None:  # noqa: N802 - Qt override name.
         if not self._close_approved:
             event.ignore()
             if not self._close_pending:
+                if not self._confirm_stop_running_jobs():
+                    return
+
                 def approved() -> None:
                     self._close_approved = True
                     self.close()

@@ -82,8 +82,16 @@ class NativeVideoDecoder:
         time_base = float(stream.time_base or 0)
         seconds = self.frame_time(frame_index)
         if time_base > 0:
-            return int(seconds / time_base)
+            # Timestamps in some files (TS remuxes, merged downloads) do not start at zero.
+            return int(seconds / time_base) + int(getattr(stream, "start_time", None) or 0)
         return int(seconds * 1_000_000)
+
+    def _start_seconds(self) -> float:
+        stream = self.stream
+        start = getattr(stream, "start_time", None) if stream is not None else None
+        if not start:
+            return 0.0
+        return float(start * stream.time_base)
 
     def _target_pts(self, frame_index: int) -> int:
         return self._target_pts_for_stream(self.stream, frame_index)
@@ -96,7 +104,7 @@ class NativeVideoDecoder:
                 frame_time = float(frame.pts * time_base)
         if frame_time is None:
             return self.clamp_frame(fallback)
-        return self.frame_index_for_time(float(frame_time))
+        return self.frame_index_for_time(float(frame_time) - self._start_seconds())
 
     def _seek(self, frame_index: int) -> None:
         if self.container is None or self.stream is None:
@@ -211,8 +219,27 @@ class NativeVideoDecoder:
         if self.frames is None:
             self.open()
 
+        best_frame = self._decode_forward_to(target)
+        if best_frame is None:
+            # The decoder was already at the end of the file. Reopen at the keyframe and
+            # decode forward again; stopping at the keyframe showed a picture up to a
+            # whole GOP too early.
+            self._seek(target)
+            best_frame = self._decode_forward_to(target)
+        if best_frame is None:
+            raise RuntimeError("Could not decode preview frame")
+
+        image = self._image_from_frame(best_frame, dimensions)
+        # Cache under the index that was asked for. With variable frame rates or a target
+        # past the last frame, the decoded index differs, and caching under that one made
+        # every refresh miss the cache and seek again.
+        self._remember_image(target, dimensions, image)
+        return image, target
+
+    def _decode_forward_to(self, target: int) -> Any | None:
+        """Decode until the frame at or after ``target``; the last frame seen if the file ends first."""
+
         best_frame = None
-        best_index = target
         fallback_index = self.last_frame_index or 0
         for frame in self.frames:
             index = self._frame_index_from_frame(frame, fallback_index)
@@ -220,23 +247,9 @@ class NativeVideoDecoder:
             self.last_frame_index = index
             self.last_pts = getattr(frame, "pts", None)
             best_frame = frame
-            best_index = index
             if index >= target:
                 break
-        if best_frame is None:
-            self._seek(target)
-            for frame in self.frames:
-                best_frame = frame
-                best_index = self._frame_index_from_frame(frame, target)
-                self.last_frame_index = best_index
-                break
-        if best_frame is None:
-            raise RuntimeError("Could not decode preview frame")
-
-        image = self._image_from_frame(best_frame, dimensions)
-        best_index = self.clamp_frame(best_index)
-        self._remember_image(best_index, dimensions, image)
-        return image, best_index
+        return best_frame
 
     def warm_frames(
         self,

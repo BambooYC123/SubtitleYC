@@ -20,7 +20,7 @@ Thank you for helping improve SubtitleYC.
 Run the automated checks before opening a pull request:
 
 ```powershell
-python -m unittest discover -s tests
+python -m unittest discover -s tests -t .
 python -m compileall subtitleyc tests
 ```
 

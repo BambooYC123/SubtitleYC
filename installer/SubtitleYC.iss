@@ -3,10 +3,10 @@
 #include WebPayloadInclude
 #endif
 #ifndef AppVersion
-#define AppVersion "0.6.0"
+#define AppVersion "0.7.0"
 #endif
 #ifndef AppDisplayVersion
-#define AppDisplayVersion "0.6.0"
+#define AppDisplayVersion "0.7.0"
 #endif
 
 #ifndef AppEdition
@@ -19,7 +19,7 @@
 #define OutputDir "..\release"
 #endif
 #ifndef OutputBaseFilename
-#define OutputBaseFilename "SubtitleYC-0.6.0-windows-setup"
+#define OutputBaseFilename "SubtitleYC-0.7.0-windows-setup"
 #endif
 #ifndef IconFile
 #define IconFile "..\assets\SubtitleYC.ico"

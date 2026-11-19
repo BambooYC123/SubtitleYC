@@ -19,7 +19,7 @@ SubtitleYC invokes the VideOCR command-line runtime for burned-in subtitle OCR.
 yt-dlp
 ------
 Project: https://github.com/yt-dlp/yt-dlp
-Version bundled by the current Windows build: 2026.7.4
+Version bundled by the current Windows build: 2026.10.26
 License: The Unlicense
 Full text: licenses/yt-dlp-Unlicense.txt
 

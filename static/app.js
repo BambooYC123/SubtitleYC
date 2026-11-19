@@ -226,11 +226,18 @@ const elements = {
   nextFrameButton: document.querySelector("#nextFrameButton"),
   previewCuePrevJumpButton: document.querySelector("#previewCuePrevJumpButton"),
   previewCueJumpButton: document.querySelector("#previewCueJumpButton"),
-  previewCueStartBackButton: document.querySelector("#previewCueStartBackButton"),
-  previewCueStartForwardButton: document.querySelector("#previewCueStartForwardButton"),
-  previewCueEndBackButton: document.querySelector("#previewCueEndBackButton"),
-  previewCueEndForwardButton: document.querySelector("#previewCueEndForwardButton"),
-  timeIndicator: document.querySelector("#timeIndicator"),
+  timeCurrent: document.querySelector("#timeCurrent"),
+  timeTotal: document.querySelector("#timeTotal"),
+  frameCurrent: document.querySelector("#frameCurrent"),
+  frameTotal: document.querySelector("#frameTotal"),
+  videoSpecs: document.querySelector("#videoSpecs"),
+  moreButton: document.querySelector("#moreButton"),
+  moreMenu: document.querySelector("#moreMenu"),
+  advancedButton: document.querySelector("#advancedButton"),
+  advancedPanel: document.querySelector("#advancedPanel"),
+  advancedCloseButton: document.querySelector("#advancedCloseButton"),
+  advancedSummary: document.querySelector("#advancedSummary"),
+  profileButtons: document.querySelector("#profileButtons"),
   activityList: document.querySelector("#activityList"),
   videoMeta: document.querySelector("#videoMeta"),
   cropReadout: document.querySelector("#cropReadout"),
@@ -487,6 +494,7 @@ function renderActivities() {
     const name = document.createElement("div");
     name.className = "activity-name";
     name.textContent = activity.label || "Job";
+    name.title = name.textContent;
 
     const percent = document.createElement("div");
     percent.className = "activity-percent";
@@ -502,7 +510,13 @@ function renderActivities() {
 
     const message = document.createElement("div");
     message.className = "activity-message";
-    message.textContent = messageText(activity.message, "Working");
+    const fullMessage = messageText(activity.message, "Working");
+    const firstLine = fullMessage.split("\n")[0].trim();
+    // Technical detail belongs in the logs. The bar keeps one short line.
+    const needsLogs = activity.status === "failed"
+      && (activity.kind !== "notice" || fullMessage.includes("\n") || fullMessage.length > 140);
+    message.textContent = needsLogs ? (firstLine.length > 140 ? `${firstLine.slice(0, 137)}...` : firstLine) : fullMessage;
+    message.title = message.textContent;
 
     top.append(name, percent);
     main.append(top, track, message);
@@ -527,6 +541,15 @@ function renderActivities() {
       action.textContent = activity.actionLabel;
       action.addEventListener("click", activity.action);
       controls.appendChild(action);
+    }
+
+    if (needsLogs) {
+      const logs = document.createElement("button");
+      logs.className = "activity-action";
+      logs.type = "button";
+      logs.textContent = "View logs";
+      logs.addEventListener("click", () => openLogs({ filter: activity.kind === "download" || activity.kind === "ocr" ? activity.kind : "ERROR" }));
+      controls.appendChild(logs);
     }
 
     if (controls.childElementCount) {
@@ -586,8 +609,24 @@ async function pollJob(jobId, options = {}) {
     action: null,
   });
 
+  let pollFailures = 0;
   while (true) {
-    const job = await fetchJson(`/api/jobs/${jobId}`);
+    let job;
+    try {
+      job = await fetchJson(`/api/jobs/${jobId}`);
+      pollFailures = 0;
+    } catch (error) {
+      // One dropped poll must not leave the job "running" forever with its buttons locked.
+      pollFailures += 1;
+      if (pollFailures < 5) {
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        continue;
+      }
+      const errorMessage = messageText(error?.message, "Job failed");
+      setActivity(jobId, { message: errorMessage, status: "failed", cancelable: false });
+      scheduleActivityRemoval(jobId, 30000);
+      throw error;
+    }
     const status = job.status || "running";
     setActivity(jobId, {
       kind: job.kind || kind,
@@ -678,7 +717,8 @@ function setTopbarPanel(panel = "") {
     button.setAttribute("aria-pressed", active ? "true" : "false");
   }
 }
-function openLogs() {
+function openLogs(options = {}) {
+  if (typeof options.filter === "string") setSelectValue(elements.logFilter, options.filter, "all");
   closeLibrary();
   closeSettings();
   closeStorage();
@@ -749,9 +789,13 @@ function renderSystemInfo(system) {
   state.system = system || null;
   state.videocrReady = Boolean(system?.videocr_cli);
   const gpuAvailable = Boolean(system?.videocr_gpu_cli);
+  // With only the GPU package installed, OCR always runs on the GPU: show that, locked on.
+  const gpuOnly = gpuAvailable && Boolean(system?.videocr_gpu_only);
   for (const control of [elements.useGpuInput, elements.settingUseGpuInput].filter(Boolean)) {
     if (!gpuAvailable) control.checked = false;
-    control.disabled = !gpuAvailable;
+    if (gpuOnly) control.checked = true;
+    control.disabled = !gpuAvailable || gpuOnly;
+    control.closest(".checkbox-row").title = gpuOnly ? "The installed OCR package runs on the GPU only." : "";
     control.setAttribute(
       "aria-label",
       gpuAvailable ? "Use GPU Acceleration" : "Use GPU Acceleration (VideOCR GPU build not installed)",
@@ -771,6 +815,8 @@ function renderSystemInfo(system) {
   } else {
     elements.systemStatus.textContent = "ffmpeg, ffprobe, and VideOCR CPU ready. GPU build not installed.";
   }
+
+  elements.systemStatus.title = elements.systemStatus.textContent;
 
   if (elements.settingToolVersionGrid) {
     elements.settingToolVersionGrid.hidden = false;
@@ -868,6 +914,7 @@ function renderStorage(payload) {
     const path = document.createElement("div");
     path.className = "storage-path";
     path.textContent = category.path || "";
+    path.title = path.textContent;
 
     main.append(name);
     main.appendChild(path);
@@ -943,8 +990,12 @@ function finishConfirmation(confirmed) {
   }
 }
 
-function showConfirmation({ title, message, confirmLabel = "Confirm" }) {
+function showConfirmation({ title, message, confirmLabel = "Confirm", warning = "This action cannot be undone." }) {
   if (state.confirmDialogResolve) finishConfirmation(false);
+  const warningLine = document.querySelector("#confirmDialogWarning");
+  warningLine.textContent = warning;
+  // Red is for irreversible deletes; a reassurance reads better in the quiet colour.
+  warningLine.classList.toggle("is-note", warning !== "This action cannot be undone.");
 
   state.confirmDialogReturnFocus = document.activeElement;
   elements.confirmDialogTitle.textContent = title;
@@ -1040,7 +1091,14 @@ function libraryRequestBody(item, extra = {}) {
   });
 }
 
+function blockedByUnsavedSubtitleEdits(action) {
+  if (!state.subtitleDirty) return false;
+  setStatus(`Save or undo subtitle changes before ${action}`, 0);
+  return true;
+}
+
 async function openLibraryVideo(item) {
+  if (blockedByUnsavedSubtitleEdits("opening another video")) return;
   if (!item) return;
   setStatus(`Opening ${item.name || "saved video"}`, 0.2);
   const session = await fetchJson("/api/library/videos/open", {
@@ -1079,6 +1137,8 @@ function renderLibraryRow(item, type) {
   const name = document.createElement("div");
   name.className = "library-name";
   name.textContent = item.display_name || item.name || item.relative_path || "Project file";
+  // Long names are cut off with an ellipsis; hovering shows the whole thing.
+  name.title = name.textContent;
 
   const meta = document.createElement("div");
   meta.className = "library-path";
@@ -1088,6 +1148,7 @@ function renderLibraryRow(item, type) {
   const path = document.createElement("div");
   path.className = "library-path";
   path.textContent = item.folder || item.path || "";
+  path.title = path.textContent;
 
   main.append(name, meta, path);
 
@@ -1151,6 +1212,7 @@ function renderRecentProjects(videos = []) {
       details.className = "recent-project-main";
       const name = document.createElement("strong");
       name.textContent = item.display_name || item.name || "Recent video";
+      row.title = name.textContent;
       const meta = document.createElement("span");
       meta.textContent = [formatLibraryDate(item.modified_at), formatBytes(item.bytes || 0)].filter(Boolean).join(" | ");
       details.append(name, meta);
@@ -1241,6 +1303,7 @@ function applyTheme(theme) {
   const normalized = normalizedTheme(theme);
   document.documentElement.dataset.theme = normalized;
   document.documentElement.style.colorScheme = normalized;
+  if (typeof timelineSignature === "string") refreshTimeline();
   syncShellTheme(normalized);
   try {
     localStorage.setItem("subtitleyc:theme", normalized);
@@ -1307,8 +1370,13 @@ function applySettingsToControls(settings) {
     elements.angleClsInput.checked = Boolean(safe.angle_cls ?? false);
     elements.postProcessingInput.checked = Boolean(safe.post_processing ?? false);
     setOcrRangeLabels();
-    const format = selectedSubtitleFormat();
-    clearSubtitleDownload(safeSubtitleName(state.session?.original_name || "subtitles", format), format);
+    refreshInspectorState();
+    // This runs after every settings autosave. Only initialise the download control
+    // when nothing is loaded; clearing here would wipe the subtitles on screen.
+    if (!state.subtitleUrl) {
+      const format = selectedSubtitleFormat();
+      clearSubtitleDownload(safeSubtitleName(state.session?.original_name || "subtitles", format), format);
+    }
     updateActionStates();
   } finally {
     state.settingsApplying = false;
@@ -1553,6 +1621,7 @@ function resetSubtitleCues() {
     elements.subtitlePreviewOverlay.textContent = "";
   }
   renderSubtitleEditor();
+  refreshTimeline(true);
 }
 
 function cloneSubtitleCue(cue) {
@@ -1632,7 +1701,8 @@ function shouldUseSubtitleHistoryShortcut(event) {
   return !target?.closest?.("input, textarea, select, [contenteditable]");
 }
 function shortcutTargetIsEditable(event) {
-  return Boolean(event.target?.closest?.("input, textarea, select, button, a, [contenteditable]"));
+  // Only text entry blocks shortcuts; excluding buttons made them dead after any click.
+  return Boolean(event.target?.closest?.("input, textarea, select, [contenteditable]"));
 }
 
 function drawerIsOpen(element) {
@@ -1752,6 +1822,7 @@ function applySubtitlePayload(payload, options = {}) {
   renderSubtitleEditor();
   updateSubtitlePreview();
   updateActionStates();
+  refreshTimeline(true);
 }
 
 function markSubtitleDirty() {
@@ -1759,6 +1830,7 @@ function markSubtitleDirty() {
   state.subtitleDirty = true;
   renderSubtitleEditorHeader();
   updateSubtitleHistoryButtons();
+  refreshTimeline(true);
 }
 
 function renderSubtitleEditorHeader() {
@@ -1837,25 +1909,21 @@ function updateSubtitlePreview() {
   if (!cue || !cue.text.trim() || nativePreviewEnabled()) {
     hideWebSubtitlePreview();
   } else {
-    elements.subtitlePreviewOverlay.textContent = cue.text.trim();
+    elements.subtitlePreviewOverlay.textContent = subtitlePlainText(cue.text);
     elements.subtitlePreviewOverlay.hidden = false;
     applySubtitleOverlayPosition();
   }
   highlightSubtitleRows();
   updatePreviewSubtitleActionStates();
   syncNativePreviewSurface();
+  refreshTimeline();
 }
 
 function updatePreviewSubtitleActionStates(canScrub = null) {
   const scrubbable = canScrub ?? Boolean(state.session && sessionDuration() > 0);
   const hasCues = state.subtitleCues.length > 0;
-  const canNudgeVisibleCue = scrubbable && currentSubtitleCueIndex() >= 0;
   elements.previewCuePrevJumpButton.disabled = !scrubbable || !hasCues;
   elements.previewCueJumpButton.disabled = !scrubbable || !hasCues;
-  elements.previewCueStartBackButton.disabled = !canNudgeVisibleCue;
-  elements.previewCueStartForwardButton.disabled = !canNudgeVisibleCue;
-  elements.previewCueEndBackButton.disabled = !canNudgeVisibleCue;
-  elements.previewCueEndForwardButton.disabled = !canNudgeVisibleCue;
   updateSubtitleHistoryButtons();
 }
 
@@ -2030,18 +2098,33 @@ async function importSubtitleFile(file) {
   });
   pushSubtitleHistory();
   applySubtitlePayload(payload, { resetHistory: false });
+  publishSubtitleUpdated();
   const current = subtitleCueAtTime(state.previewTime);
   if (current.index < 0 && state.subtitleCues.length) {
     seekTo(state.subtitleCues[0].start_seconds, { immediate: true });
   }
   setStatus(`Loaded ${payload.cue_count || 0} subtitle cues from ${file.name}`, 1);
 }
+// Tell an open editor window that this video's subtitles changed here.
+function publishSubtitleUpdated() {
+  if (!state.session?.id) return;
+  try {
+    localStorage.setItem("subtitleyc:subtitle-updated", JSON.stringify({ sessionId: state.session.id, at: Date.now() }));
+  } catch (_error) {
+    // Cross-window synchronization is best-effort.
+  }
+}
+
 async function loadSubtitleCues(options = {}) {
-  if (!state.session || !state.subtitleUrl) {
+  // force: the editor just created subtitles for a video that had none here.
+  if (!state.session || (!state.subtitleUrl && !options.force)) {
     if (!options.silent) setStatus("No subtitle file is available", 0);
     return null;
   }
-  const payload = await fetchJson(`/api/videos/${state.session.id}/subtitles`);
+  const requestedSessionId = state.session.id;
+  const payload = await fetchJson(`/api/videos/${requestedSessionId}/subtitles`);
+  // Another video may have been opened while this was loading.
+  if (state.session?.id !== requestedSessionId) return null;
   applySubtitlePayload(payload);
   if (!options.silent) setStatus(`${payload.cue_count || 0} subtitle cues loaded`, 1);
   return payload;
@@ -2160,12 +2243,6 @@ function sortSubtitleCues(activeCue = null) {
   state.subtitleActiveIndex = activeCue ? state.subtitleCues.indexOf(activeCue) : state.subtitleActiveIndex;
 }
 
-function currentSubtitleCueIndex() {
-  const live = subtitleCueAtTime(state.previewTime);
-  if (live.index >= 0) return live.index;
-  return state.subtitleActiveIndex;
-}
-
 function sortedSubtitleCueItems() {
   return state.subtitleCues
     .map((cue, index) => ({ cue: normalizeCue(cue), index }))
@@ -2257,15 +2334,6 @@ function nudgeSubtitleBoundary(index, boundary, frames) {
   setStatus(`Nudged cue ${cueNumber} ${label} ${direction} by ${formatFrameCount(frames)} frame${Math.abs(frames) === 1 ? "" : "s"}`, 1);
 }
 
-function nudgeCurrentSubtitleBoundary(boundary, frames) {
-  const index = currentSubtitleCueIndex();
-  if (index < 0 || !state.subtitleCues[index]) {
-    setStatus("Move the playhead over a cue or focus a cue row before nudging it", 0);
-    return;
-  }
-  nudgeSubtitleBoundary(index, boundary, frames);
-}
-
 function nudgeAllSubtitles(frames) {
   if (!state.subtitleCues.length) {
     setStatus("No subtitle cues to nudge", 0);
@@ -2311,6 +2379,7 @@ const subtitleSaver = createSubtitleSaveCoordinator({
   }),
   apply: (payload) => {
     applySubtitlePayload(payload, { resetHistory: false });
+    publishSubtitleUpdated();
     setStatus(`Saved ${payload.cue_count || 0} subtitle cues`, 1);
   },
   changed: () => setStatus("Saved earlier changes; newer edits are still unsaved", 1),
@@ -2321,6 +2390,9 @@ async function saveSubtitleCues() {
   return subtitleSaver.save();
 }
 
+const STAGE_COLOR = "#05080b";
+const STAGE_PADDING = 12;
+
 function sourceSize() {
   const meta = state.session?.metadata || {};
   const width = Number(meta.width || 0);
@@ -2330,10 +2402,6 @@ function sourceSize() {
     return { width: state.image.naturalWidth, height: state.image.naturalHeight };
   }
   return { width: 0, height: 0 };
-}
-
-function canDrawVideo() {
-  return false;
 }
 
 function updateNativeVideoVisibility() {
@@ -2380,6 +2448,7 @@ function updateActionStates() {
   if (elements.removeSubtitlesButton) elements.removeSubtitlesButton.disabled = !hasSession || !hasSubtitles || state.previewPreparing;
   if (elements.removeVideoButton) elements.removeVideoButton.disabled = !hasSession || videoBusy || ocrActive;
   if (elements.recentProjects) elements.recentProjects.hidden = hasSession;
+  refreshInspectorState();
 }
 function resizeCanvas() {
   const rect = elements.canvas.getBoundingClientRect();
@@ -2398,10 +2467,10 @@ function drawCanvas() {
 
   if (state.previewPreparing) {
     state.imageRect = { x: 0, y: 0, width: canvasRect.width, height: canvasRect.height, scale: 1 };
-    ctx.fillStyle = "#111827";
+    ctx.fillStyle = STAGE_COLOR;
     ctx.fillRect(0, 0, canvasRect.width, canvasRect.height);
     ctx.fillStyle = "#cbd5e1";
-    ctx.font = "14px system-ui";
+    ctx.font = "600 13px system-ui";
     ctx.textAlign = "center";
     ctx.fillText("Preparing preview...", canvasRect.width / 2, canvasRect.height / 2);
     return;
@@ -2409,38 +2478,48 @@ function drawCanvas() {
 
   const size = sourceSize();
   if (!size.width || !size.height) {
+    // The empty stage is covered by the Previous Projects card.
     state.imageRect = { x: 0, y: 0, width: canvasRect.width, height: canvasRect.height, scale: 1 };
-    const darkPreview = currentTheme() === "dark";
-    ctx.fillStyle = darkPreview ? "#0b1118" : "#f5f7fb";
+    ctx.fillStyle = STAGE_COLOR;
     ctx.fillRect(0, 0, canvasRect.width, canvasRect.height);
-    ctx.fillStyle = darkPreview ? "#98a6b7" : "#646a73";
-    ctx.font = "14px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText("Load a video", canvasRect.width / 2, canvasRect.height / 2);
     return;
   }
 
-  const scale = Math.min(canvasRect.width / size.width, canvasRect.height / size.height);
-  const width = size.width * scale;
-  const height = size.height * scale;
-  const x = (canvasRect.width - width) / 2;
-  const y = (canvasRect.height - height) / 2;
+  // The picture keeps its own shape inside the dark stage, inset and outlined.
+  const innerWidth = Math.max(2, canvasRect.width - 2 * STAGE_PADDING);
+  const innerHeight = Math.max(2, canvasRect.height - 2 * STAGE_PADDING);
+  const scale = Math.min(innerWidth / size.width, innerHeight / size.height);
+  const width = Math.round(size.width * scale);
+  const height = Math.round(size.height * scale);
+  const x = Math.round((canvasRect.width - width) / 2);
+  const y = Math.round((canvasRect.height - height) / 2);
   state.imageRect = { x, y, width, height, scale };
 
-  ctx.fillStyle = "#111827";
+  ctx.fillStyle = STAGE_COLOR;
   ctx.fillRect(0, 0, canvasRect.width, canvasRect.height);
   if (state.imageReady) {
     ctx.drawImage(state.image, x, y, width, height);
   }
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#000000";
+  ctx.strokeRect(x - 1.5, y - 1.5, width + 3, height + 3);
+  ctx.strokeStyle = "#3b4958";
+  ctx.strokeRect(x - 0.5, y - 0.5, width + 1, height + 1);
 
   if (state.crop) {
     const rect = cropToCanvas(state.crop);
     ctx.save();
-    ctx.fillStyle = "rgba(15, 118, 110, 0.14)";
-    ctx.strokeStyle = "#0f766e";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "rgba(45, 212, 191, 0.09)";
+    ctx.strokeStyle = "#2dd4bf";
+    ctx.lineWidth = 1;
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
-    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+    ctx.strokeRect(Math.round(rect.x) + 0.5, Math.round(rect.y) + 0.5, Math.round(rect.width) - 1, Math.round(rect.height) - 1);
+    ctx.fillStyle = "#2dd4bf";
+    for (const cornerX of [rect.x, rect.x + rect.width]) {
+      for (const cornerY of [rect.y, rect.y + rect.height]) {
+        ctx.fillRect(Math.round(cornerX) - 3, Math.round(cornerY) - 3, 7, 7);
+      }
+    }
     ctx.restore();
   }
 }
@@ -2473,7 +2552,7 @@ function setCrop(crop, options = {}) {
   const width = Math.max(1, Math.min(size.width - x, Math.round(crop.width)));
   const height = Math.max(1, Math.min(size.height - y, Math.round(crop.height)));
   state.crop = { x, y, width, height };
-  elements.cropReadout.textContent = `Crop: x ${x}, y ${y}, w ${width}, h ${height}`;
+  elements.cropReadout.textContent = `Region ${width} × ${height} at ${x}, ${y}`;
   updateActionStates();
   drawCanvas();
   if (!options.fromNative) syncNativePreviewSurface();
@@ -2494,14 +2573,14 @@ function updateVideoMeta() {
   if (!state.session) {
     elements.videoMeta.textContent = "No video loaded";
     elements.videoMeta.removeAttribute("title");
+    elements.videoSpecs.textContent = "";
     return;
   }
   const meta = state.session.metadata;
-  const duration = Number(meta.duration || 0).toFixed(2);
-  const fps = Number(meta.fps || 0).toFixed(3);
-  elements.videoMeta.textContent =
-    `${state.session.original_name} | ${meta.width}x${meta.height} | ${fps} fps | ${duration}s`;
+  const fps = String(Number(Number(meta.fps || 0).toFixed(3)));
+  elements.videoMeta.textContent = state.session.original_name;
   elements.videoMeta.removeAttribute("title");
+  elements.videoSpecs.textContent = `${meta.width} × ${meta.height} · ${fps} fps · ${formatIndicatorTime(Number(meta.duration || 0))}`;
 }
 
 function sessionDuration(session = state.session) {
@@ -2514,11 +2593,25 @@ function updateTimeUI(options = {}) {
   const duration = sessionDuration();
   const totalFrames = state.session ? previewTotalFrameCount() : 0;
   const currentFrame = totalFrames > 0 ? Math.min(totalFrames, clampPreviewFrameIndex(previewFrameIndex(current)) + 1) : 0;
-  elements.timeIndicator.textContent = `Frame: ${currentFrame} / ${totalFrames} | Time: ${formatIndicatorTime(current)} / ${formatIndicatorTime(duration)}`;
+  elements.timeCurrent.textContent = formatClock(current);
+  elements.timeTotal.textContent = `/ ${formatClock(duration)}`;
+  elements.frameCurrent.textContent = String(currentFrame);
+  elements.frameTotal.textContent = String(totalFrames);
   if (!options.preserveSlider && !state.previewScrubbing && !elements.seekSlider.matches(":active")) {
     elements.seekSlider.value = String(current);
   }
+  timeline.update();
   if (!options.lightweight) updateSubtitlePreview();
+}
+
+// mm:ss.mmm (h:mm:ss.mmm past an hour), rounded once in whole milliseconds.
+function formatClock(seconds) {
+  const totalMillis = Math.round(Math.max(0, Number(seconds) || 0) * 1000);
+  const hours = Math.floor(totalMillis / 3600000);
+  const minutes = Math.floor((totalMillis % 3600000) / 60000);
+  const secs = Math.floor((totalMillis % 60000) / 1000);
+  const tail = `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(totalMillis % 1000).padStart(3, "0")}`;
+  return hours > 0 ? `${hours}:${tail}` : tail;
 }
 
 function previewFrameIndex(time) {
@@ -2557,10 +2650,6 @@ function frameUrlForIndex(index) {
   return `${base}${separator}frame_index=${encodeURIComponent(clampPreviewFrameIndex(index))}`;
 }
 
-function previewFrameUrl(time) {
-  return frameUrlForIndex(previewFrameIndex(time));
-}
-
 function nativePreviewApi() {
   return window.pywebview?.api?.update_native_preview || null;
 }
@@ -2582,7 +2671,7 @@ function setNativePreviewVisible(visible) {
 }
 
 function nativePreviewOccluders() {
-  return [elements.logDrawer, elements.settingsDrawer, elements.libraryDrawer, elements.storageDrawer, elements.subtitleDrawer, document.querySelector("#videoTitleTooltip")]
+  return [elements.logDrawer, elements.settingsDrawer, elements.libraryDrawer, elements.storageDrawer, elements.subtitleDrawer, elements.advancedPanel, elements.moreMenu, document.querySelector("#videoTitleTooltip")]
     .filter((element) => element && !element.hidden)
     .map((element) => {
       const rect = element.getBoundingClientRect();
@@ -2603,7 +2692,12 @@ function requestNativePreviewSurfaceSync() {
 
 function currentSubtitlePreviewText() {
   const { cue } = subtitleCueAtTime(state.previewTime);
-  return cue?.text?.trim() || "";
+  return subtitlePlainText(cue?.text);
+}
+
+// The editor stores styling as <b>/<i>/<u>/<font> markup; this preview shows plain text.
+function subtitlePlainText(text) {
+  return String(text || "").replace(/<\/?(?:b|i|u|font)\b[^>]*>/gi, "").trim();
 }
 
 function clampSubtitleOverlayValue(value, min, max) {
@@ -2849,30 +2943,6 @@ function prefetchPreviewFrame(index) {
   image.src = url;
 }
 
-function loadPreviewFrameImage(frameIndex) {
-  if (!state.session) return Promise.resolve(null);
-  const target = clampPreviewFrameIndex(frameIndex);
-  const cached = state.previewFrameCache.get(target);
-  if (cached) {
-    return Promise.resolve(cached);
-  }
-  const url = frameUrlForIndex(target);
-  if (!url) return Promise.resolve(null);
-  const sessionId = state.session.id;
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => {
-      if (!state.session || state.session.id !== sessionId) {
-        resolve(null);
-        return;
-      }
-      cachePreviewFrame(target, image);
-      resolve(image);
-    };
-    image.onerror = () => reject(new Error("Could not load preview frame"));
-    image.src = url;
-  });
-}
 function loadPreviewFrame(time) {
   if (!state.session) return;
   const frameIndex = clampPreviewFrameIndex(previewFrameIndex(time));
@@ -3014,11 +3084,6 @@ function seekTo(time, options = {}) {
   }
 }
 
-function initialPreviewTime() {
-  const duration = sessionDuration();
-  return duration > 0 ? duration * 0.25 : 0;
-}
-
 function stopPreviewPlayback(updateButton = true) {
   if (state.previewTimer) {
     window.clearInterval(state.previewTimer);
@@ -3103,7 +3168,7 @@ function setMinDurationFromSession(session = state.session) {
 }
 
 function updateDownloadLinkLabel(format) {
-  elements.downloadLinkLabel.textContent = `Download .${format || "srt"}`;
+  refreshBottomActions();
 }
 
 function publishSubtitleFormatUpdate(format = state.subtitleFormat) {
@@ -3150,39 +3215,6 @@ function cancelPreviewWarmup() {
   state.previewWarmupJobId = null;
   if (jobId) {
     fetch(`/api/jobs/${jobId}/cancel`, { method: "POST" }).catch(() => undefined);
-  }
-}
-
-async function startPreviewWarmup(session, options = {}) {
-  if (!session?.id) return null;
-  let jobId = null;
-  try {
-    const payload = await fetchJson(`/api/videos/${session.id}/preview-cache`, { method: "POST" });
-    jobId = payload.job_id;
-    state.previewWarmupJobId = jobId;
-    const result = await pollJob(jobId, {
-      kind: "preview",
-      label: options.label || "Preview cache",
-      cancelable: options.cancelable !== false,
-      removeDelayMs: options.removeDelayMs || 6000,
-    });
-    if (state.previewWarmupJobId === jobId) {
-      state.previewWarmupJobId = null;
-    }
-    if (!options.silentStatus && state.session?.id === session.id && result?.cached_frames) {
-      const limited = result.limited ? "sampled" : "ready";
-      setStatus(`Preview cache ${limited}: ${result.cached_frames} frames`, 1);
-    }
-    return result || null;
-  } catch (error) {
-    if (state.previewWarmupJobId === jobId) {
-      state.previewWarmupJobId = null;
-    }
-    if (error.cancelled) return null;
-    if (!options.silentStatus) {
-      setStatus(error.message || "Preview cache failed", 0);
-    }
-    return null;
   }
 }
 
@@ -3253,6 +3285,13 @@ async function removeCurrentSubtitles() {
     openSubtitleEditor();
     return;
   }
+  const confirmedSubtitles = await showConfirmation({
+    title: "Remove subtitles from the preview?",
+    message: state.subtitleFilename || "",
+    confirmLabel: "Remove",
+    warning: "Nothing is deleted. It stays in Previous Projects.",
+  });
+  if (!confirmedSubtitles || !state.session) return;
 
   const sessionId = state.session.id;
   const originalName = state.session.original_name || "subtitles";
@@ -3283,6 +3322,13 @@ async function removeCurrentVideo() {
     openSubtitleEditor();
     return;
   }
+  const confirmedVideo = await showConfirmation({
+    title: "Remove video from the preview?",
+    message: state.session.original_name || "",
+    confirmLabel: "Remove",
+    warning: "Nothing is deleted. It stays in Previous Projects.",
+  });
+  if (!confirmedVideo || !state.session) return;
 
   stopPreviewPlayback(false);
   cancelPreviewWarmup();
@@ -3672,9 +3718,6 @@ async function downloadSelectedSubtitle() {
   scheduleActivityRemoval(jobId, 12000);
   setStatus(`Subtitle saved: ${result.path || result.filename || "subtitle file"}`, 1);
 }
-function isChineseLanguage(language) {
-  return language.includes("chi_") || language === "ch" || language === "chinese_cht";
-}
 
 function setOcrRangeLabels() {
   elements.confidenceValue.textContent = elements.confidenceInput.value;
@@ -3702,6 +3745,7 @@ function applyLanguageDefaults() {
   elements.postProcessingInput.checked = false;
   elements.normalizeChineseInput.checked = true;
   setOcrRangeLabels();
+  refreshInspectorState();
 }
 function currentOcrPayload() {
   const endValue = elements.endInput.value.trim();
@@ -3734,7 +3778,192 @@ function currentOcrPayload() {
   };
 }
 
-elements.logsButton.addEventListener("click", openLogs);
+// Quality profiles are shortcuts that fill in the values below them. Every value
+// stays editable; changing one by hand simply shows the profile as Custom.
+// Balanced is the app's long-standing default. Fast and Accurate trade speed for
+// thoroughness: frames skipped, how small a frame change triggers a new read
+// (SSIM), the width frames are scaled to, and which recognition model is used.
+const OCR_PROFILES = {
+  fast: { confidence: 65, similarity: 72, ssim: 80, framesToSkip: 2, maxWidth: 960, serverModel: false },
+  balanced: { confidence: 65, similarity: 72, ssim: 88, framesToSkip: 0, maxWidth: 1280, serverModel: true },
+  accurate: { confidence: 65, similarity: 72, ssim: 95, framesToSkip: 0, maxWidth: 1920, serverModel: true },
+};
+
+function ocrProfileValues() {
+  return {
+    confidence: Number(elements.confidenceInput.value),
+    similarity: Number(elements.similarityInput.value),
+    ssim: Number(elements.ssimInput.value),
+    framesToSkip: Number(elements.frameStepInput.value || 0),
+    maxWidth: Number(elements.maxWidthInput.value || 0),
+    serverModel: elements.useServerModelInput.checked,
+  };
+}
+
+function currentOcrProfile() {
+  const values = ocrProfileValues();
+  const match = Object.entries(OCR_PROFILES).find(([, profile]) => Object.keys(profile).every((key) => profile[key] === values[key]));
+  return match ? match[0] : "custom";
+}
+
+function applyOcrProfile(name) {
+  const profile = OCR_PROFILES[name];
+  if (!profile) return;
+  elements.confidenceInput.value = String(profile.confidence);
+  elements.similarityInput.value = String(profile.similarity);
+  elements.ssimInput.value = String(profile.ssim);
+  elements.frameStepInput.value = String(profile.framesToSkip);
+  elements.maxWidthInput.value = String(profile.maxWidth);
+  elements.useServerModelInput.checked = profile.serverModel;
+  setOcrRangeLabels();
+  refreshInspectorState();
+  scheduleSettingsAutosave();
+}
+
+function refreshProfileButtons() {
+  const active = currentOcrProfile();
+  for (const button of elements.profileButtons.querySelectorAll("button")) {
+    button.setAttribute("aria-pressed", button.dataset.profile === active ? "true" : "false");
+  }
+}
+
+// One line beside "Advanced settings…" so the hidden values are never a surprise.
+function refreshAdvancedSummary() {
+  const parts = [];
+  const start = Number(elements.startInput.value || 0);
+  const endValue = elements.endInput.value.trim();
+  if (state.session && (start > 0 || endValue)) {
+    parts.push(`Range ${formatIndicatorTime(start)} – ${formatIndicatorTime(endValue ? Number(endValue) : sessionDuration())}`);
+  }
+  if (elements.useGpuInput.checked) parts.push("GPU on");
+  if (elements.snapToFrameInput.checked) parts.push("Snap to frames");
+  if (elements.useFullframeInput.checked) parts.push("Full frame");
+  if (elements.brightnessInput.value.trim()) parts.push("Brightness filter");
+  const signature = parts.join("|");
+  if (elements.advancedSummary.dataset.signature === signature) return;
+  elements.advancedSummary.dataset.signature = signature;
+  elements.advancedSummary.replaceChildren(...parts.map((part) => {
+    const span = document.createElement("span");
+    span.textContent = part;
+    return span;
+  }));
+  elements.advancedSummary.title = parts.join(" · ");
+}
+
+const timeline = window.SubtitleYCTimeline.create({
+  root: document.querySelector("#timeline"),
+  slider: elements.seekSlider,
+  duration: () => (state.session && !state.previewPreparing ? sessionDuration() : 0),
+  time: () => state.previewTime,
+  cues: () => state.subtitleCues,
+  selected: () => state.subtitleActiveIndex,
+  range: () => ({ start: elements.startInput.value, end: elements.endInput.value.trim() || null }),
+  onRangeChange: (start, end) => {
+    elements.startInput.value = String(Number(start.toFixed(2)));
+    elements.endInput.value = end === null ? "" : String(Number(end.toFixed(2)));
+    refreshInspectorState();
+  },
+});
+let timelineSignature = "";
+
+// Repaints the timeline only when something it draws has changed.
+function refreshTimeline(force = false) {
+  const signature = [
+    state.session?.id || "",
+    state.previewPreparing ? 0 : sessionDuration(),
+    state.subtitleCues.length,
+    state.subtitleActiveIndex,
+    elements.startInput.value,
+    elements.endInput.value,
+    document.documentElement.dataset.theme || "",
+  ].join("|");
+  if (!force && signature === timelineSignature) return;
+  timelineSignature = signature;
+  timeline.render();
+}
+
+// The second line of each big bottom button says what pressing it will act on,
+// or why it is unavailable.
+function refreshBottomActions() {
+  const count = state.subtitleCues.length;
+  const cueText = `${count} ${count === 1 ? "cue" : "cues"}`;
+  document.querySelector("#editSubtitlesNote").textContent = count ? `${cueText} to review` : "Nothing to edit yet";
+  document.querySelector("#subtitleUploadNote").textContent = state.session ? ".srt, .ass or .vtt" : "Open a video first";
+  elements.downloadLinkLabel.textContent = state.subtitleUrl
+    ? (count ? `${cueText} as .${state.subtitleFormat || "srt"}` : `As .${state.subtitleFormat || "srt"}`)
+    : "Run OCR first";
+  document.querySelector("#editSubtitlesButton").disabled = elements.subtitleEditorButton.disabled;
+}
+
+function refreshInspectorState() {
+  refreshBottomActions();
+  refreshProfileButtons();
+  refreshAdvancedSummary();
+  refreshTimeline();
+}
+
+function setAdvancedPanelOpen(open) {
+  elements.advancedPanel.hidden = !open;
+  elements.advancedButton.setAttribute("aria-expanded", open ? "true" : "false");
+  elements.advancedButton.classList.toggle("is-active", open);
+  requestNativePreviewSurfaceSync();
+}
+
+const INSPECTOR_FOLDED_STORAGE_KEY = "subtitleyc:inspector-folded";
+
+// Folds the settings column to a rail. The choice is remembered between launches.
+function setInspectorFolded(folded, options = {}) {
+  const workspace = document.querySelector("#workspace");
+  if (folded) setAdvancedPanelOpen(false);
+  workspace.classList.toggle("is-folded", folded);
+  if (options.remember !== false) {
+    try {
+      localStorage.setItem(INSPECTOR_FOLDED_STORAGE_KEY, folded ? "1" : "0");
+    } catch (_error) {
+      // The fold still applies for this session.
+    }
+  }
+  resizeCanvas();
+  refreshTimeline(true);
+  if (options.focus) document.querySelector(folded ? "#inspectorShowButton" : "#inspectorHideButton").focus();
+}
+
+function setMoreMenuOpen(open) {
+  if (elements.moreMenu.hidden === !open) return;
+  elements.moreMenu.hidden = !open;
+  elements.moreButton.setAttribute("aria-expanded", open ? "true" : "false");
+  requestNativePreviewSurfaceSync();
+}
+
+for (const button of elements.profileButtons.querySelectorAll("button")) {
+  button.addEventListener("click", () => applyOcrProfile(button.dataset.profile));
+}
+for (const container of [document.querySelector(".inspector"), elements.advancedPanel]) {
+  container.addEventListener("input", refreshInspectorState);
+  container.addEventListener("change", refreshInspectorState);
+}
+document.querySelector("#inspectorHideButton").addEventListener("click", () => setInspectorFolded(true, { focus: true }));
+document.querySelector("#inspectorShowButton").addEventListener("click", () => setInspectorFolded(false, { focus: true }));
+try {
+  if (localStorage.getItem(INSPECTOR_FOLDED_STORAGE_KEY) === "1") setInspectorFolded(true, { remember: false });
+} catch (_error) {
+  // Start unfolded when storage is unavailable.
+}
+elements.advancedButton.addEventListener("click", () => setAdvancedPanelOpen(elements.advancedPanel.hidden));
+elements.advancedCloseButton.addEventListener("click", () => {
+  setAdvancedPanelOpen(false);
+  elements.advancedButton.focus();
+});
+elements.moreButton.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setMoreMenuOpen(elements.moreMenu.hidden);
+});
+elements.moreMenu.addEventListener("click", () => setMoreMenuOpen(false));
+document.addEventListener("click", (event) => {
+  if (!elements.moreMenu.hidden && !elements.moreMenu.contains(event.target)) setMoreMenuOpen(false);
+});
+
+elements.logsButton.addEventListener("click", () => openLogs());
 elements.logsCloseButton.addEventListener("click", closeLogs);
 elements.logOverlay.addEventListener("click", closeLogs);
 elements.logFilter.addEventListener("change", () => {
@@ -3775,6 +4004,7 @@ elements.subtitleEditorButton.addEventListener("click", () => {
   openSubtitleEditorTab().catch((error) => setStatus(error.message || "Could not open SubtitleYC Editor", 0));
 });
 elements.subtitleUploadButton.addEventListener("click", openSubtitleImportPicker);
+document.querySelector("#editSubtitlesButton").addEventListener("click", () => elements.subtitleEditorButton.click());
 elements.removeSubtitlesButton?.addEventListener("click", () => {
   removeCurrentSubtitles().catch((error) => setStatus(error.message || "Could not remove subtitles", 0));
 });
@@ -3859,8 +4089,10 @@ window.addEventListener("storage", (event) => {
         );
         syncNativePreviewSurface();
         setStatus("Subtitles removed from preview. They remain available in Previous Projects.", 1);
+      } else if (state.subtitleDirty) {
+        setStatus("Subtitles changed in the editor. Save here to keep this version, or undo your edits.", 0);
       } else {
-        loadSubtitleCues({ silent: true }).catch(() => undefined);
+        loadSubtitleCues({ silent: true, force: true }).catch(() => undefined);
       }
     } else if (!state.session && payload.sessionId) {
       if (!payload.detached) applyEditorSessionUpdate(payload, { loadSubtitles: true }).catch(() => undefined);
@@ -3893,6 +4125,15 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (handleGlobalKeyboardShortcut(event)) return;
+  if (event.key === "Escape" && !elements.moreMenu.hidden) {
+    setMoreMenuOpen(false);
+    elements.moreButton.focus();
+    return;
+  }
+  if (event.key === "Escape" && !elements.advancedPanel.hidden && !anyDrawerOpen()) {
+    setAdvancedPanelOpen(false);
+    return;
+  }
   if (event.key === "Escape" && !elements.libraryDrawer.hidden) {
     closeLibrary();
   }
@@ -3937,7 +4178,16 @@ elements.settingDownloadDirButton.addEventListener("click", async () => {
     setStatus(error.message || error, 0);
   }
 });
+// Phone apps copy a whole sentence around the link. Keep just the link.
+function linkFromPastedText(text) {
+  const value = String(text || "").trim();
+  const match = value.match(/https?:\/\/[^\s<>"'\u3000-\u303f\uff00-\uffef\u4e00-\u9fff]+/i);
+  return match && match[0] !== value ? match[0].replace(/[.,;:!?)\]}]+$/, "") : value;
+}
+
 elements.urlInput.addEventListener("input", () => {
+  const link = linkFromPastedText(elements.urlInput.value);
+  if (link !== elements.urlInput.value.trim() && /\s/.test(elements.urlInput.value.trim())) elements.urlInput.value = link;
   clearSubtitleTracks();
   resetFormatOptions();
   updateActionStates();
@@ -3994,6 +4244,7 @@ elements.downloadDirButton.addEventListener("click", async () => {
   }
 });
 elements.urlButton.addEventListener("click", async () => {
+  if (blockedByUnsavedSubtitleEdits("opening another video")) return;
   try {
     const url = elements.urlInput.value.trim();
     if (!url || hasActiveJobKind("download") || hasActiveJobKind("subtitle_download")) return;
@@ -4043,6 +4294,7 @@ elements.urlButton.addEventListener("click", async () => {
 });
 
 async function openLocalVideoPath(path, options = {}) {
+  if (blockedByUnsavedSubtitleEdits("opening another video")) return;
   const cleanPath = String(path || "").trim();
   if (!cleanPath || state.fileUploadActive || hasActiveJobKind("ocr")) return;
   state.fileUploadActive = true;
@@ -4063,6 +4315,7 @@ async function openLocalVideoPath(path, options = {}) {
 }
 
 async function chooseLocalVideoFile() {
+  if (blockedByUnsavedSubtitleEdits("opening another video")) return;
   const chooser = window.pywebview?.api?.choose_video_file;
   if (!chooser) {
     elements.fileInput.click();
@@ -4110,7 +4363,9 @@ elements.runButton.addEventListener("click", async () => {
     const sourceSessionId = state.session.id;
     const sourceName = state.session.original_name;
     const outputFormat = selectedSubtitleFormat();
-    clearSubtitleDownload(safeSubtitleName(sourceName, outputFormat), outputFormat);
+    if (blockedByUnsavedSubtitleEdits("running OCR")) return;
+    // Existing subtitles stay on screen until the new result replaces them, so a
+    // rejected, failed or cancelled run loses nothing.
     const payload = await fetchJson(`/api/videos/${sourceSessionId}/ocr`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -4127,9 +4382,12 @@ elements.runButton.addEventListener("click", async () => {
     const resultUrl = result.subtitle_url || result.srt_url;
     const resultFilename = result.subtitle_filename || safeSubtitleName(sourceName, resultFormat);
     const attachSubtitle = () => {
-      if (result.session && state.session?.id === sourceSessionId) {
-        state.session = result.session;
+      // The result belongs to the video it was made from, not to whatever is open now.
+      if (state.session?.id !== sourceSessionId) {
+        setStatus("Reopen the original video to use these subtitles", 0);
+        return;
       }
+      if (result.session) state.session = result.session;
       setSubtitleDownload(resultUrl, sourceName, resultFormat, resultFilename);
       setStatus(`${resultLabel} ready: ${result.cue_count} cues`, 1);
     };
@@ -4239,12 +4497,7 @@ elements.nextFrameButton.addEventListener("click", () => {
 
 elements.previewCuePrevJumpButton.addEventListener("click", jumpToPreviousSubtitleBoundary);
 elements.previewCueJumpButton.addEventListener("click", jumpToNextSubtitleBoundary);
-elements.previewCueStartBackButton.addEventListener("click", () => nudgeCurrentSubtitleBoundary("start", -subtitleShiftFrameCount()));
-elements.previewCueStartForwardButton.addEventListener("click", () => nudgeCurrentSubtitleBoundary("start", subtitleShiftFrameCount()));
-elements.previewCueEndBackButton.addEventListener("click", () => nudgeCurrentSubtitleBoundary("end", -subtitleShiftFrameCount()));
-elements.previewCueEndForwardButton.addEventListener("click", () => nudgeCurrentSubtitleBoundary("end", subtitleShiftFrameCount()));
 elements.languageInput.addEventListener("change", () => {
-  applyLanguageDefaults();
   if (state.subtitleTracks.length) {
     const preferred = preferredSubtitleTrack(state.subtitleTracks);
     if (preferred) {
@@ -4262,6 +4515,11 @@ elements.settingSimilarityInput.addEventListener("input", setSettingsRangeLabels
 elements.settingSsimInput.addEventListener("input", setSettingsRangeLabels);
 
 window.addEventListener("resize", resizeCanvas);
+// The stage also changes size when the status line grows or a pane reflows, and
+// the native video surface has to follow it.
+if (typeof ResizeObserver === "function") {
+  new ResizeObserver(() => resizeCanvas()).observe(elements.canvas.parentElement);
+}
 window.addEventListener("subtitleyc-language-changed", () => {
   renderActivities();
   if (state.library) renderLibrary(state.library);

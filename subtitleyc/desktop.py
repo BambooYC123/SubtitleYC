@@ -284,7 +284,7 @@ class DesktopApi:
         selected_path = selection[0] if isinstance(selection, (list, tuple)) else selection
         target = Path(str(selected_path))
         if target.suffix.casefold() != ".srt":
-            target = target.with_suffix(".srt")
+            target = target.with_name(target.name + ".srt")
         return {"ok": True, "path": str(target)}
 
     def save_subtitle(self, subtitle_url: str, suggested_name: str = "subtitles.srt") -> dict[str, object]:
@@ -320,7 +320,7 @@ class DesktopApi:
         selected_path = selection[0] if isinstance(selection, (list, tuple)) else selection
         target = Path(str(selected_path))
         if target.suffix.casefold() != suffix:
-            target = target.with_suffix(suffix)
+            target = target.with_name(target.name + suffix)
 
         url = urllib.parse.urljoin(f"{self.base_url}/", subtitle_url.lstrip("/"))
         parsed_url = urllib.parse.urlsplit(url)
@@ -447,6 +447,12 @@ def _run_private_desktop(
         if on_ready:
             on_ready()
         _log("Stopping private backend")
+        try:
+            from subtitleyc.main import stop_all_jobs
+
+            stop_all_jobs()
+        except Exception as exc:  # noqa: BLE001 - shutdown must continue regardless.
+            _log(f"Could not stop active jobs: {exc}")
         server.should_exit = True
         thread.join(timeout=5)
 

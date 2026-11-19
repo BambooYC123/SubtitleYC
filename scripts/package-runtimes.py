@@ -46,7 +46,7 @@ if __name__ == "__main__":
     parser.add_argument("--cpu", type=Path, required=True)
     parser.add_argument("--gpu", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--release", default="0.6.0")
+    parser.add_argument("--release", default="0.7.0")
     parser.add_argument("--catalog", type=Path, default=Path(__file__).resolve().parents[1] / "assets/runtime-catalog.json")
     args = parser.parse_args()
     catalog = {"cpu": package(args.cpu, "cpu", args.output, args.release),

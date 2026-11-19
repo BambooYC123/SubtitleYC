@@ -87,14 +87,37 @@ class LocalizationTests(unittest.TestCase):
         self.assertIn("They remain available in Previous Projects", editor_js)
         self.assertIn("systemInfoText", main_js)
 
-    def test_editor_preview_expands_for_widescreen_video(self) -> None:
+    def test_extract_and_editor_share_one_interface(self) -> None:
+        ui_css = (ROOT / "static" / "ui.css").read_text(encoding="utf-8")
         editor_css = (ROOT / "static" / "editor.css").read_text(encoding="utf-8")
+        main_html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+        editor_html = (ROOT / "static" / "editor.html").read_text(encoding="utf-8")
 
-        self.assertIn("width: min(1920px, calc(100vw - 28px));", editor_css)
-        self.assertIn("grid-template-columns: minmax(0, 1fr) minmax(350px, 400px);", editor_css)
-        self.assertIn("aspect-ratio: 16 / 9;", editor_css)
-        self.assertIn("flex: 1 1 auto;", editor_css)
+        for page in (main_html, editor_html):
+            self.assertIn("/assets/ui.css", page)
+            self.assertIn('class="mode-tabs"', page)
+            self.assertIn('id="timeline"', page)
+            self.assertIn('id="seekSlider" class="tl-seek"', page)
+        self.assertLess(main_html.index("/assets/timeline.js"), main_html.index("/assets/app.js"))
+        self.assertLess(editor_html.index("/assets/timeline.js"), editor_html.index("/assets/editor.js"))
+        # The viewer stage takes all spare height; the video is never a fixed-height box.
+        # The Extract settings column can fold to a rail.
+        self.assertIn('id="inspectorHideButton"', main_html)
+        self.assertIn('id="inspectorShowButton"', main_html)
+        self.assertIn(".workspace.is-folded", (ROOT / "static" / "styles.css").read_text(encoding="utf-8"))
+        self.assertIn(".viewer .stage {", ui_css)
+        self.assertIn("flex: 1 1 auto;", ui_css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) 452px;", editor_css)
         self.assertNotIn("height: clamp(240px, 42vh, 430px);", editor_css)
+
+    def test_native_preview_outlines_the_picture_inside_the_stage(self) -> None:
+        native_preview = (ROOT / "subtitleyc" / "qt_desktop.py").read_text(encoding="utf-8")
+        main_js = (ROOT / "static" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("STAGE_PADDING = 12", native_preview)
+        self.assertIn("const STAGE_PADDING = 12;", main_js)
+        self.assertIn("FRAME_BORDER_COLOR", native_preview)
+        self.assertIn('"show_main_view"', native_preview)
 
     def test_editor_coalesces_native_preview_scrubbing(self) -> None:
         editor_js = (ROOT / "static" / "editor.js").read_text(encoding="utf-8")

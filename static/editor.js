@@ -85,7 +85,22 @@ const state = {
 const elements = {
   status: document.querySelector("#editorStatus"),
   videoTitle: document.querySelector("#videoTitle"),
-  timeIndicator: document.querySelector("#timeIndicator"),
+  timeCurrent: document.querySelector("#timeCurrent"),
+  timeTotal: document.querySelector("#timeTotal"),
+  frameCurrent: document.querySelector("#frameCurrent"),
+  frameTotal: document.querySelector("#frameTotal"),
+  videoSpecs: document.querySelector("#videoSpecs"),
+  modeExtractButton: document.querySelector("#modeExtractButton"),
+  moreButton: document.querySelector("#moreButton"),
+  moreMenu: document.querySelector("#moreMenu"),
+  findInput: document.querySelector("#findInput"),
+  replaceToggleButton: document.querySelector("#replaceToggleButton"),
+  replaceBar: document.querySelector("#replaceBar"),
+  replaceInput: document.querySelector("#replaceInput"),
+  replaceAllButton: document.querySelector("#replaceAllButton"),
+  durationOutput: document.querySelector("#durationOutput"),
+  cueStats: document.querySelector("#cueStats"),
+  cueIssues: document.querySelector("#cueIssues"),
   videoFrame: document.querySelector(".video-frame"),
   video: document.querySelector("#editorVideo"),
   frameFallback: document.querySelector("#editorFrameFallback"),
@@ -107,14 +122,12 @@ const elements = {
   startInput: document.querySelector("#startInput"),
   endInput: document.querySelector("#endInput"),
   textInput: document.querySelector("#textInput"),
-  styleToolbar: document.querySelector("#subtitleStyleToolbar"),
   boldStyleButton: document.querySelector("#boldStyleButton"),
   italicStyleButton: document.querySelector("#italicStyleButton"),
   underlineStyleButton: document.querySelector("#underlineStyleButton"),
   textColorInput: document.querySelector("#textColorInput"),
   clearStyleButton: document.querySelector("#clearStyleButton"),
   cueForm: document.querySelector("#cueForm"),
-  applyCueButton: document.querySelector("#applyCueButton"),
   addCueButton: document.querySelector("#addCueButton"),
   deleteCueButton: document.querySelector("#deleteCueButton"),
   undoButton: document.querySelector("#undoButton"),
@@ -148,7 +161,7 @@ let editorTooltipTimer = 0;
 function setStatus(message, ok = true) {
   elements.status.textContent = message;
   elements.status.title = message;
-  elements.status.style.color = ok ? "" : "#b42318";
+  elements.status.style.color = ok ? "" : "var(--danger)";
 }
 
 function positionEditorTooltip(target) {
@@ -230,6 +243,8 @@ function syncShellTheme(theme) {
 function applyTheme(theme, options = {}) {
   const normalized = normalizedTheme(theme);
   document.documentElement.dataset.theme = normalized;
+  // The timeline canvas reads its colours from the theme.
+  window.requestAnimationFrame(() => timeline.render());
   document.documentElement.style.colorScheme = normalized;
   if (options.syncShell !== false) syncShellTheme(normalized);
 }
@@ -283,6 +298,12 @@ window.addEventListener("storage", (event) => {
       if (payload.detached && sessionId && payload.sessionId === sessionId) {
         clearEditorSubtitles();
         setStatus("Subtitles removed from preview. They remain available in Previous Projects.");
+      } else if (sessionId && payload.sessionId === sessionId) {
+        if (state.dirty) {
+          setStatus("Subtitles changed in the main window. Save to keep this version, or undo your edits and reload.", false);
+        } else {
+          loadCues({ silent: true }).catch(() => undefined);
+        }
       }
     } catch (_error) {
       // Ignore malformed cross-tab subtitle notices.
@@ -591,7 +612,7 @@ function setupDraggableSubtitleOverlay() {
   });
 }
 function nativePreviewOccluders() {
-  return [elements.libraryDrawer]
+  return [elements.libraryDrawer, elements.moreMenu]
     .filter((element) => element && !element.hidden)
     .map((element) => {
       const rect = element.getBoundingClientRect();
@@ -702,12 +723,7 @@ function schedulePreviewScrubUi() {
   state.previewScrubUiFrame = window.requestAnimationFrame(() => {
     state.previewScrubUiFrame = null;
     if (!state.session) return;
-    const current = currentTime();
-    const totalFrames = frameCount();
-    const frame = frameIndexForTime(current);
-    elements.timeIndicator.textContent =
-      "Frame: " + Math.min(totalFrames, frame + 1) + " / " + totalFrames +
-      " | Time: " + formatTime(current) + " / " + formatTime(duration());
+    setTimeReadout(currentTime());
   });
 }
 
@@ -740,24 +756,41 @@ function flushPreviewScrubSync() {
 
 window.subtitleycSyncNativePreview = syncNativePreviewSurface;
 
+function setTimeReadout(current) {
+  const hasVideo = Boolean(state.session);
+  const totalFrames = hasVideo ? frameCount() : 0;
+  elements.timeCurrent.textContent = formatTime(hasVideo ? current : 0);
+  elements.timeTotal.textContent = `/ ${formatTime(hasVideo ? duration() : 0)}`;
+  elements.frameCurrent.textContent = String(hasVideo ? Math.min(totalFrames, frameIndexForTime(current) + 1) : 0);
+  elements.frameTotal.textContent = String(totalFrames);
+  timeline.update();
+}
+
+// Accepts mm:ss.mmm, hh:mm:ss.mmm or plain seconds.
+function parseTimeInput(value, fallback) {
+  const text = String(value ?? "").trim().replace(",", ".");
+  if (!text) return fallback;
+  const parts = text.split(":");
+  if (parts.length > 3 || parts.some((part) => part.trim() === "" || !Number.isFinite(Number(part)))) return fallback;
+  return Math.max(0, parts.reduce((total, part) => total * 60 + Number(part), 0));
+}
+
 function frameStepFrames() {
   const value = Math.abs(Number(elements.frameStepInput.value || 1));
   return Number.isFinite(value) && value > 0 ? value : 1;
 }
 
 function formatTime(seconds) {
-  const safe = Math.max(0, Number(seconds || 0));
-  const minutes = Math.floor(safe / 60);
-  const secs = Math.floor(safe % 60);
-  const millis = Math.round((safe - Math.floor(safe)) * 1000);
+  // Round once in whole milliseconds so 82.9997 s reads 01:23.000, never 01:22.1000.
+  const totalMillis = Math.round(Math.max(0, Number(seconds || 0)) * 1000);
+  const minutes = Math.floor(totalMillis / 60000);
+  const secs = Math.floor((totalMillis % 60000) / 1000);
+  const millis = totalMillis % 1000;
   return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${String(millis).padStart(3, "0")}`;
 }
 
 function subtitleFormatLabel(_format) {
   return "SRT";
-}
-function subtitleExtension(_format = EDITOR_SUBTITLE_FORMAT) {
-  return EDITOR_SUBTITLE_FORMAT;
 }
 
 function cleanSubtitleStem(value) {
@@ -783,7 +816,11 @@ function editorSubtitleDownloadUrl() {
 
 function updateDownloadButton() {
   if (!elements.downloadButton) return;
-  elements.downloadButton.textContent = "Download .srt";
+  const count = state.cues.length;
+  document.querySelector("#downloadNote").textContent = state.dirty
+    ? "Save changes first"
+    : state.subtitleUrl ? `${count} ${count === 1 ? "cue" : "cues"} as .srt` : "Nothing to export yet";
+  document.querySelector("#saveNote").textContent = state.dirty ? "Unsaved changes" : "No unsaved changes";
   elements.downloadButton.disabled = state.dirty || !state.subtitleUrl;
   elements.downloadButton.title = state.dirty ? "Save changes before downloading" : "Download the saved SRT file";
 }
@@ -905,6 +942,7 @@ function restoreHistory(snapshot) {
 }
 
 function undoEdit() {
+  commitPendingForm();
   if (!state.undoStack.length) return;
   state.redoStack.push(cueSnapshot());
   restoreHistory(state.undoStack.pop());
@@ -913,6 +951,7 @@ function undoEdit() {
 }
 
 function redoEdit() {
+  commitPendingForm();
   if (!state.redoStack.length) return;
   state.undoStack.push(cueSnapshot());
   restoreHistory(state.redoStack.pop());
@@ -928,7 +967,9 @@ function shouldUseHistoryShortcut(event) {
   return !target?.closest?.("input, textarea, select, [contenteditable]");
 }
 function shortcutTargetIsEditable(event) {
-  return Boolean(event.target?.closest?.("input, textarea, select, button, a, [contenteditable]"));
+  // Only text entry blocks shortcuts. Cue rows and transport controls are buttons, and
+  // excluding them made Space, the arrows and Delete dead after any click.
+  return Boolean(event.target?.closest?.("input, textarea, select, [contenteditable]"));
 }
 
 function handleEditorKeyboardShortcut(event) {
@@ -953,7 +994,7 @@ function handleEditorKeyboardShortcut(event) {
     }
     if (key === "r") {
       event.preventDefault();
-      loadCues().catch((error) => setStatus(error.message || "Reload failed", false));
+      reloadCuesFromDisk();
       return true;
     }
   }
@@ -1032,6 +1073,7 @@ function markDirty() {
   state.dirty = true;
   elements.saveButton.disabled = false;
   elements.cueMeta.textContent = `${subtitleFormatLabel(state.subtitleFormat)} - Unsaved`;
+  elements.cueMeta.classList.add("is-unsaved");
   updateDownloadButton();
   updateHistoryButtons();
 }
@@ -1040,44 +1082,110 @@ function setClean() {
   state.dirty = false;
   elements.saveButton.disabled = true;
   elements.cueMeta.textContent = subtitleFormatLabel(state.subtitleFormat);
+  elements.cueMeta.classList.remove("is-unsaved");
   updateDownloadButton();
   updateHistoryButtons();
+}
+
+// A cue is flagged when it is blank, overlaps the next cue, or is on screen too
+// briefly to read. Reading speed counts a CJK character as two.
+const READING_SPEED_LIMIT = 25;
+const WIDE_CHARACTER = /[\u2E80-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFFEF]/;
+
+function cueCharacters(cue) {
+  return Array.from(subtitlePlainText(cue.text).replace(/\s+/g, ""));
+}
+
+function cueFlags(cue, index) {
+  const characters = cueCharacters(cue);
+  if (!characters.length) return ["EMPTY"];
+  const flags = [];
+  const seconds = Math.max(0.001, cue.end_seconds - cue.start_seconds);
+  const weight = characters.reduce((total, character) => total + (WIDE_CHARACTER.test(character) ? 2 : 1), 0);
+  if (weight / seconds > READING_SPEED_LIMIT) flags.push("FAST");
+  const next = index >= 0 ? state.cues[index + 1] : null;
+  if (next && next.start_seconds < cue.end_seconds - 0.0005) flags.push("OVERLAP");
+  return flags;
+}
+
+function findQuery() {
+  return elements.findInput.value.trim().toLowerCase();
+}
+
+function cueMatchesFind(cue, query = findQuery()) {
+  return Boolean(query) && subtitlePlainText(cue.text).toLowerCase().includes(query);
 }
 
 function renderCueList() {
   elements.cueCount.textContent = `${state.cues.length} ${state.cues.length === 1 ? "cue" : "cues"}`;
   elements.cueList.replaceChildren();
+  timelineStale = true;
   if (!state.cues.length) {
     const empty = document.createElement("div");
     empty.className = "cue-empty";
     empty.textContent = "No subtitle cues loaded";
     elements.cueList.appendChild(empty);
-    updateFormState();
+    elements.cueIssues.hidden = true;
+    updateCueRowStates();
     return;
   }
+  const query = findQuery();
+  let flaggedCount = 0;
   state.cues.forEach((cue, index) => {
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "cue-row";
+    row.className = "cue-row cue-grid";
     row.dataset.index = String(index);
     row.setAttribute("role", "option");
 
     const number = document.createElement("span");
     number.className = "cue-number";
-    number.textContent = String(index + 1).padStart(3, "0");
-    const main = document.createElement("span");
-    main.className = "cue-main";
+    number.textContent = String(index + 1);
     const time = document.createElement("span");
     time.className = "cue-time";
-    time.textContent = `${formatTime(cue.start_seconds)} -> ${formatTime(cue.end_seconds)}`;
+    time.textContent = formatTime(cue.start_seconds);
+    const end = document.createElement("em");
+    end.textContent = formatTime(cue.end_seconds);
+    time.append(end);
+
+    const cell = document.createElement("span");
+    const flags = cueFlags(cue, index);
+    if (flags.length) {
+      flaggedCount += 1;
+      row.classList.add("is-flagged");
+    }
+    for (const flag of flags) {
+      const badge = document.createElement("b");
+      badge.className = "cue-flag";
+      badge.textContent = flag;
+      cell.append(badge);
+    }
     const text = document.createElement("span");
     text.className = "cue-text";
-    text.textContent = subtitlePlainText(cue.text).trim() || "Empty subtitle";
-    main.append(time, text);
-    row.append(number, main);
-    row.addEventListener("click", () => selectCue(index, { seek: true }));
+    const lines = subtitlePlainText(cue.text).trim().split("\n");
+    if (lines[0]) {
+      text.append(lines[0]);
+      if (lines.length > 1) {
+        const rest = document.createElement("em");
+        rest.textContent = lines.slice(1).join("\n");
+        text.append(rest);
+      }
+    } else {
+      text.classList.add("is-empty");
+    }
+    cell.append(text);
+    if (cueMatchesFind(cue, query)) row.classList.add("is-match");
+    row.append(number, time, cell);
+    row.addEventListener("click", () => {
+      // Committing can re-sort the list, so look the clicked cue up again afterwards.
+      commitPendingForm();
+      selectCue(state.cues.indexOf(cue), { seek: true });
+    });
     elements.cueList.appendChild(row);
   });
+  updateDownloadButton();
+  elements.cueIssues.hidden = flaggedCount === 0;
+  elements.cueIssues.textContent = `${flaggedCount} to check`;
   updateCueRowStates({ scroll: true });
 }
 
@@ -1091,12 +1199,16 @@ function updateCueRowStates(options = {}) {
   });
   if (options.scroll) scrollActiveCueIntoView();
   updateFormState();
+  if (timelineStale || timelineSelected !== state.selectedIndex) {
+    timelineStale = false;
+    timelineSelected = state.selectedIndex;
+    timeline.render();
+  }
 }
 
 function updateFormState() {
   const cue = state.cues[state.selectedIndex];
   const hasCue = Boolean(cue);
-  elements.applyCueButton.disabled = !hasCue;
   elements.deleteCueButton.disabled = !hasCue;
   elements.startInput.disabled = !hasCue;
   elements.endInput.disabled = !hasCue;
@@ -1111,6 +1223,26 @@ function updateFormState() {
     state.textSelection = { start: 0, end: 0 };
   }
   updateStyleButtonState();
+  updateCueStats();
+  updateTransportState();
+}
+
+// Duration and reading speed for whatever is in the form right now.
+function updateCueStats() {
+  const cue = state.cues[state.selectedIndex];
+  if (!cue) {
+    elements.durationOutput.value = "";
+    elements.cueStats.textContent = "";
+    elements.cueStats.classList.remove("is-fast");
+    return;
+  }
+  const start = parseTimeInput(elements.startInput.value, cue.start_seconds);
+  const end = Math.max(start + 0.001, parseTimeInput(elements.endInput.value, cue.end_seconds));
+  const draft = { start_seconds: start, end_seconds: end, text: elements.textInput.value };
+  const count = cueCharacters(draft).length;
+  elements.durationOutput.value = `${(end - start).toFixed(3)} s`;
+  elements.cueStats.textContent = `${count} characters · ${Math.round(count / (end - start))} per second`;
+  elements.cueStats.classList.toggle("is-fast", cueFlags(draft, -1).includes("FAST"));
 }
 
 function selectCue(index, options = {}) {
@@ -1120,16 +1252,18 @@ function selectCue(index, options = {}) {
     return;
   }
   state.selectedIndex = index;
+  state.formDirty = false;
   const cue = state.cues[index];
-  elements.startInput.value = cue.start_seconds.toFixed(3);
-  elements.endInput.value = cue.end_seconds.toFixed(3);
+  elements.startInput.value = formatTime(cue.start_seconds);
+  elements.endInput.value = formatTime(cue.end_seconds);
   elements.textInput.value = cue.text;
   state.textSelection = { start: 0, end: cue.text.length };
   if (options.seek) {
     seekTo(cue.start_seconds);
-  } else {
-    updateCueRowStates({ scroll: true });
   }
+  // Always refresh: seeking to the cue that is already active changes nothing else,
+  // which used to leave the form disabled and the row unselected.
+  updateCueRowStates({ scroll: true });
 }
 
 function scrollActiveCueIntoView() {
@@ -1143,7 +1277,7 @@ function updateTransportState() {
   const hasVideo = Boolean(state.session);
   const hasCues = state.cues.length > 0;
   const hasSubtitles = Boolean(state.subtitleUrl || hasCues);
-  const visibleCue = hasVideo && cueAtTime(currentTime()).index >= 0;
+  const visibleCue = hasVideo && nudgeTargetIndex() >= 0;
   elements.videoUploadButton.disabled = state.videoUploadActive;
   if (elements.videoKeepCopyInput) elements.videoKeepCopyInput.disabled = state.videoUploadActive;
   elements.previousButton.disabled = state.videoUploadActive;
@@ -1168,7 +1302,7 @@ function updatePreview() {
   if (!state.session) {
     state.activeIndex = -1;
     state.fallbackTime = 0;
-    elements.timeIndicator.textContent = "Frame: 0 / 0 | Time: 00:00.000 / 00:00.000";
+    setTimeReadout(0);
     elements.seekSlider.value = "0";
     elements.seekSlider.max = "0";
     elements.subtitleOverlay.replaceChildren();
@@ -1181,9 +1315,7 @@ function updatePreview() {
   const current = currentTime();
   state.fallbackTime = current;
   if (state.useFrameFallback && !state.useNativePreview) updateFrameFallback(current);
-  const totalFrames = frameCount();
-  const frame = frameIndexForTime(current);
-  elements.timeIndicator.textContent = `Frame: ${Math.min(totalFrames, frame + 1)} / ${totalFrames} | Time: ${formatTime(current)} / ${formatTime(duration())}`;
+  setTimeReadout(current);
   if (!state.suppressSlider) {
     elements.seekSlider.value = String(current);
   }
@@ -1204,12 +1336,30 @@ function updatePreview() {
   if (previousActive !== state.activeIndex) updateCueRowStates({ scroll: true });
 }
 
+// Unsaved-edit guard shared by every action that would replace the cues on screen.
+function blockedByUnsavedEdits(action) {
+  if (!state.dirty) return false;
+  setStatus(`Save or undo subtitle changes before ${action}`, false);
+  return true;
+}
+
+// Text typed into the form belongs to the selected cue. Commit it before the
+// selection moves, so clicking another cue, nudging or Add never discards it.
+function commitPendingForm() {
+  if (!state.formDirty) return;
+  state.formDirty = false;
+  applyCueForm({ silent: true });
+}
+
 function applyCueForm(options = {}) {
+  state.formDirty = false;
   const cue = state.cues[state.selectedIndex];
   if (!cue) return false;
-  const start = Math.max(0, Number(elements.startInput.value || cue.start_seconds));
-  const end = Math.max(start + 0.001, Number(elements.endInput.value || cue.end_seconds));
+  const start = parseTimeInput(elements.startInput.value, cue.start_seconds);
+  const end = Math.max(start + 0.001, parseTimeInput(elements.endInput.value, cue.end_seconds));
   const text = elements.textInput.value.trim();
+  elements.startInput.value = formatTime(start);
+  elements.endInput.value = formatTime(end);
   const changed = !sameCueBoundaryTime(cue.start_seconds, start) || !sameCueBoundaryTime(cue.end_seconds, end) || cue.text !== text;
   if (!changed) return false;
   pushHistory();
@@ -1357,15 +1507,20 @@ function nudgeCue(index, boundary, frames) {
     cue.end_seconds = Math.max(cue.start_seconds + 0.001, cue.end_seconds + delta);
   }
   state.selectedIndex = index;
-  elements.startInput.value = cue.start_seconds.toFixed(3);
-  elements.endInput.value = cue.end_seconds.toFixed(3);
+  elements.startInput.value = formatTime(cue.start_seconds);
+  elements.endInput.value = formatTime(cue.end_seconds);
   markDirty();
   renderCueList();
   updatePreview();
 }
 
+function nudgeTargetIndex() {
+  return state.selectedIndex >= 0 ? state.selectedIndex : cueAtTime(currentTime()).index;
+}
+
 function nudgeVisible(boundary, frames) {
-  const index = cueAtTime(currentTime()).index;
+  commitPendingForm();
+  const index = nudgeTargetIndex();
   if (index < 0) return;
   selectCue(index);
   nudgeCue(index, boundary, frames);
@@ -1505,6 +1660,7 @@ function jumpToPreviousSubtitleBoundary() {
 }
 
 function addCue() {
+  commitPendingForm();
   const start = currentTime();
   const cue = { start_seconds: start, end_seconds: Math.min(duration() || start + 2, start + Math.max(1, frameSeconds())), text: "" };
   pushHistory();
@@ -1512,7 +1668,10 @@ function addCue() {
   sortCues();
   state.selectedIndex = state.cues.indexOf(cue);
   markDirty();
+  // Rebuild the rows so the new cue appears and later rows keep the right index.
+  renderCueList();
   selectCue(state.selectedIndex);
+  updatePreview();
   elements.textInput.focus();
 }
 
@@ -1552,6 +1711,7 @@ function clearEditorSession() {
   state.useNativePreview = false;
   elements.videoTitle.textContent = "No video loaded";
   elements.videoTitle.removeAttribute("title");
+  elements.videoSpecs.textContent = "";
   elements.video.removeAttribute("src");
   elements.video.removeAttribute("poster");
   try {
@@ -1593,12 +1753,19 @@ function clearEditorSubtitles() {
   updatePreview();
 }
 
+// Removing only detaches the file from the preview, but it is still worth a second look.
+function confirmRemoval(question) {
+  const translate = (text) => window.SubtitleYCI18n?.t(text) || text;
+  return window.confirm(`${translate(question)}\n\n${translate("Nothing is deleted. It stays in Previous Projects.")}`);
+}
+
 async function removeEditorSubtitles() {
   if (!sessionId || (!state.subtitleUrl && !state.cues.length)) return;
   if (state.dirty) {
     setStatus("Save or undo subtitle changes before removing subtitles", false);
     return;
   }
+  if (!confirmRemoval("Remove subtitles from the preview?")) return;
 
   const detachedSessionId = sessionId;
   const session = await fetchJson(`/api/videos/${encodeURIComponent(detachedSessionId)}/subtitles`, { method: "DELETE" });
@@ -1623,6 +1790,7 @@ async function removeEditorVideo() {
     setStatus("Save or undo subtitle changes before removing the video", false);
     return;
   }
+  if (!confirmRemoval("Remove video from the preview?")) return;
   clearEditorSession();
   await refreshLibrary().catch(() => undefined);
   setStatus("Video removed from preview. It remains available in Previous Projects.");
@@ -1657,6 +1825,11 @@ async function loadSession(session = null, options = {}) {
   const videoTitle = loadedSession.original_name || "Video";
   elements.videoTitle.textContent = videoTitle;
   elements.videoTitle.title = videoTitle;
+  const metadata = loadedSession.metadata || {};
+  elements.videoSpecs.textContent = metadata.width && metadata.height
+    ? `${metadata.width} × ${metadata.height} · ${Number(Number(metadata.fps || 0).toFixed(3))} fps · ${window.SubtitleYCTimeline.clock(metadata.duration || 0)}`
+    : "";
+  timelineStale = true;
   const nextTime = clampTime(Number(options.time ?? initialTime ?? 0));
   initialTime = nextTime;
   state.fallbackTime = nextTime;
@@ -1715,14 +1888,24 @@ const cueSaver = createSubtitleSaveCoordinator({
   write: (data) => fetchJson(`/api/videos/${encodeURIComponent(data.sessionId)}/subtitles`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ subtitle_format: EDITOR_SUBTITLE_FORMAT, cues: data.cues.filter((cue) => cue.text.trim()) }),
+    // No subtitle_format: the server keeps the format chosen for this video (.srt, .ass or .txt).
+    body: JSON.stringify({ cues: data.cues.filter((cue) => cue.text.trim()) }),
   }),
   apply: (payload) => {
     state.subtitleFormat = EDITOR_SUBTITLE_FORMAT;
     applySubtitleDownloadPayload(payload);
+    // The server drops blank cues and re-sorts, so the old index can now point at a
+    // different cue. Find the selected cue again, or clear the form.
+    const selected = state.cues[state.selectedIndex];
     state.cues = (payload.cues || []).map(normalizeCue);
+    state.selectedIndex = selected
+      ? state.cues.findIndex((cue) => cue.text === selected.text.trim()
+        && Math.abs(cue.start_seconds - selected.start_seconds) < 0.002
+        && Math.abs(cue.end_seconds - selected.end_seconds) < 0.002)
+      : -1;
     setClean();
     renderCueList();
+    selectCue(state.selectedIndex);
     updatePreview();
     publishSubtitleUpdated();
     setStatus(`Saved ${state.cues.length} cues`);
@@ -1730,6 +1913,11 @@ const cueSaver = createSubtitleSaveCoordinator({
   changed: () => setStatus("Saved earlier changes; newer edits are still unsaved"),
 });
 installSubtitleCloseGuard({ dirty: () => state.dirty, save: () => saveCues(), busy: () => cueSaver.busy });
+
+function reloadCuesFromDisk() {
+  if (elements.reloadButton.disabled || blockedByUnsavedEdits("reloading subtitles")) return;
+  loadCues().catch((error) => setStatus(error.message || "Reload failed", false));
+}
 
 async function saveCues() {
   if (!sessionId) {
@@ -1781,6 +1969,7 @@ async function importSubtitleFile(file) {
     setStatus("Load a video before uploading subtitles", false);
     return;
   }
+  if (blockedByUnsavedEdits("loading other subtitles")) return;
   const formData = new FormData();
   formData.append("file", file);
   const payload = await fetchJson(`/api/videos/${encodeURIComponent(sessionId)}/subtitles/import`, {
@@ -1790,10 +1979,13 @@ async function importSubtitleFile(file) {
   state.subtitleFormat = EDITOR_SUBTITLE_FORMAT;
   applySubtitleDownloadPayload(payload);
   state.cues = (payload.cues || []).map(normalizeCue);
+  sortCues();
   state.selectedIndex = cueAtTime(currentTime()).index;
   setClean();
   resetHistory();
   renderCueList();
+  // Fill the form for the selected cue; otherwise "Save Changes" writes stale values into it.
+  selectCue(state.selectedIndex);
   updatePreview();
   publishSubtitleUpdated();
   setStatus(`Loaded ${state.cues.length} cues from ${file.name}`);
@@ -1848,6 +2040,7 @@ function renderLibraryEmpty(container, message) {
 async function openVideoPath(path, options = {}) {
   const cleanPath = String(path || "").trim();
   if (!cleanPath || state.videoUploadActive) return;
+  if (blockedByUnsavedEdits("opening another video")) return;
   state.videoUploadActive = true;
   updateTransportState();
   try {
@@ -1883,6 +2076,7 @@ async function chooseVideoFile() {
 
 async function uploadVideoFile(file) {
   if (!file || state.videoUploadActive) return;
+  if (blockedByUnsavedEdits("opening another video")) return;
   state.videoUploadActive = true;
   updateTransportState();
   try {
@@ -1905,6 +2099,7 @@ async function uploadVideoFile(file) {
 
 async function openLibraryVideo(item) {
   if (!item) return;
+  if (blockedByUnsavedEdits("opening another video")) return;
   setStatus(`Opening ${item.name || "previous video"}`);
   const session = await fetchJson("/api/library/videos/open", {
     method: "POST",
@@ -1922,6 +2117,7 @@ async function importLibrarySubtitle(item) {
     setStatus("Load a video before attaching a previous subtitle", false);
     return;
   }
+  if (blockedByUnsavedEdits("loading other subtitles")) return;
   const payload = await fetchJson("/api/library/subtitles/import", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -1951,6 +2147,7 @@ function renderLibraryRow(item, type) {
   const name = document.createElement("div");
   name.className = "editor-library-name";
   name.textContent = item.display_name || item.name || item.relative_path || "Project file";
+  name.title = name.textContent;
 
   const meta = document.createElement("div");
   meta.className = "editor-library-path";
@@ -1959,6 +2156,7 @@ function renderLibraryRow(item, type) {
   const folder = document.createElement("div");
   folder.className = "editor-library-path";
   folder.textContent = item.folder || item.path || "";
+  folder.title = folder.textContent;
   main.append(name, meta, folder);
 
   const action = document.createElement("button");
@@ -2021,7 +2219,151 @@ function closeLibrary() {
   requestNativePreviewSurfaceSync();
 }
 
+function selectFoundCue(direction = 1) {
+  const query = findQuery();
+  for (const row of elements.cueList.querySelectorAll(".cue-row")) {
+    row.classList.toggle("is-match", cueMatchesFind(state.cues[Number(row.dataset.index)], query));
+  }
+  if (!query || !state.cues.length) return;
+  const count = state.cues.length;
+  const origin = state.selectedIndex >= 0 ? state.selectedIndex : direction > 0 ? -1 : 0;
+  for (let step = 1; step <= count; step += 1) {
+    const index = (((origin + direction * step) % count) + count) % count;
+    if (cueMatchesFind(state.cues[index], query)) {
+      commitPendingForm();
+      selectCue(index, { seek: true });
+      return;
+    }
+  }
+  setStatus("No subtitle contains that text", false);
+}
+
+// Replaces text between style tags only, so <b> or <font> markup is never rewritten.
+function replaceAllInCues() {
+  const query = elements.findInput.value.trim();
+  if (!query) {
+    elements.findInput.focus();
+    return;
+  }
+  commitPendingForm();
+  const pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+  const replacement = elements.replaceInput.value;
+  let replaced = 0;
+  const next = state.cues.map((cue) => cue.text.split(/(<\/?(?:b|i|u|font)\b[^>]*>)/gi).map((part, index) => {
+    if (index % 2 === 1) return part;
+    return part.replace(pattern, () => {
+      replaced += 1;
+      return replacement;
+    });
+  }).join(""));
+  if (!replaced) {
+    setStatus("No subtitle contains that text", false);
+    return;
+  }
+  pushHistory();
+  state.cues.forEach((cue, index) => {
+    cue.text = next[index];
+  });
+  markDirty();
+  renderCueList();
+  if (state.selectedIndex >= 0) selectCue(state.selectedIndex);
+  updatePreview();
+  setStatus(`Replaced ${replaced} ${replaced === 1 ? "match" : "matches"}`);
+}
+
+function setMoreMenuOpen(open) {
+  if (elements.moreMenu.hidden === !open) return;
+  elements.moreMenu.hidden = !open;
+  elements.moreButton.setAttribute("aria-expanded", open ? "true" : "false");
+  requestNativePreviewSurfaceSync();
+}
+
+function showExtractView() {
+  const showMain = window.pywebview?.api?.show_main_view;
+  if (showMain) {
+    showMain().catch(() => undefined);
+    return;
+  }
+  if (window.opener && !window.opener.closed) {
+    window.opener.focus();
+    return;
+  }
+  if (!blockedByUnsavedEdits("leaving the editor")) window.location.href = "/";
+}
+
+const timeline = window.SubtitleYCTimeline.create({
+  root: document.querySelector("#timeline"),
+  slider: elements.seekSlider,
+  detail: true,
+  duration: () => (state.session ? duration() : 0),
+  time: () => currentTime(),
+  cues: () => state.cues,
+  selected: () => state.selectedIndex,
+  flagged: (cue, index) => cueFlags(cue, index).length > 0,
+  onSeek: (seconds) => seekTo(seconds),
+  onSelectCue: (index) => {
+    commitPendingForm();
+    selectCue(index, { seek: true });
+  },
+  frameSeconds: () => frameSeconds(),
+  formatTime: (seconds) => formatTime(seconds),
+  // Dragging a grip on the selected cue shows the frame at the edge being moved.
+  onRetimePreview: (boundary, seconds) => seekTo(boundary === "end" ? Math.max(0, seconds - frameSeconds()) : seconds),
+  onRetime: (index, boundary, seconds) => {
+    const cue = state.cues[index];
+    if (!cue) return;
+    commitPendingForm();
+    pushHistory();
+    if (boundary === "start") cue.start_seconds = Math.max(0, Math.min(cue.end_seconds - 0.001, seconds));
+    else cue.end_seconds = Math.max(cue.start_seconds + 0.001, seconds);
+    sortCues();
+    state.selectedIndex = state.cues.indexOf(cue);
+    markDirty();
+    renderCueList();
+    selectCue(state.selectedIndex);
+    updatePreview();
+  },
+});
+let timelineStale = false;
+let timelineSelected = -1;
+
 function bindEvents() {
+  // Keep the native video surface on the stage when the layout reflows.
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(() => requestNativePreviewSurfaceSync()).observe(elements.videoFrame);
+  }
+  elements.modeExtractButton.addEventListener("click", showExtractView);
+  elements.moreButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setMoreMenuOpen(elements.moreMenu.hidden);
+  });
+  elements.moreMenu.addEventListener("click", (event) => {
+    if (!event.target.closest(".menu-check")) setMoreMenuOpen(false);
+  });
+  document.addEventListener("click", (event) => {
+    if (!elements.moreMenu.hidden && !elements.moreMenu.contains(event.target)) setMoreMenuOpen(false);
+  });
+  elements.findInput.addEventListener("input", () => selectFoundCue(1));
+  elements.findInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    selectFoundCue(event.shiftKey ? -1 : 1);
+  });
+  elements.replaceToggleButton.addEventListener("click", () => {
+    const open = elements.replaceBar.hidden;
+    elements.replaceBar.hidden = !open;
+    elements.replaceToggleButton.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) elements.replaceInput.focus();
+  });
+  elements.replaceAllButton.addEventListener("click", replaceAllInCues);
+  elements.replaceInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    replaceAllInCues();
+  });
+  for (const input of [elements.startInput, elements.endInput]) {
+    input.addEventListener("change", commitPendingForm);
+  }
   elements.video.addEventListener("loadedmetadata", () => {
     window.clearTimeout(state.fallbackProbeTimer);
     if (elements.video.videoWidth && !state.useNativePreview) setFrameFallback(false);
@@ -2060,6 +2402,11 @@ function bindEvents() {
     seekTo(Number(elements.seekSlider.value || 0), { keepPlaying: true, immediate: true });
     state.suppressSlider = false;
     finishPreviewScrub();
+    const hit = cueAtTime(currentTime()).index;
+    if (hit >= 0 && hit !== state.selectedIndex) {
+      commitPendingForm();
+      selectCue(hit);
+    }
   });
   elements.prevSubtitleButton.addEventListener("click", jumpToPreviousSubtitleBoundary);
   elements.nextSubtitleButton.addEventListener("click", jumpToNextSubtitleBoundary);
@@ -2095,7 +2442,11 @@ function bindEvents() {
     saveCues().catch((error) => setStatus(error.message || "Save failed", false));
   });
   for (const input of [elements.textInput, elements.startInput, elements.endInput]) {
-    input.addEventListener("input", markDirty);
+    input.addEventListener("input", () => {
+      state.formDirty = true;
+      markDirty();
+      updateCueStats();
+    });
   }
   elements.addCueButton.addEventListener("click", addCue);
   elements.deleteCueButton.addEventListener("click", deleteSelectedCue);
@@ -2121,7 +2472,7 @@ function bindEvents() {
   elements.libraryRefreshButton.addEventListener("click", () => refreshLibrary().catch((error) => setStatus(error.message || "Refresh failed", false)));
   elements.saveButton.addEventListener("click", () => saveCues().catch((error) => setStatus(error.message || "Save failed", false)));
   elements.downloadButton.addEventListener("click", () => downloadSavedSubtitle().catch((error) => setStatus(error.message || "Download failed", false)));
-  elements.reloadButton.addEventListener("click", () => loadCues().catch((error) => setStatus(error.message || "Reload failed", false)));
+  elements.reloadButton.addEventListener("click", reloadCuesFromDisk);
   elements.uploadButton.addEventListener("click", () => elements.subtitleImportInput.click());
   elements.subtitleImportInput.addEventListener("change", () => {
     const file = elements.subtitleImportInput.files?.[0];
@@ -2151,6 +2502,11 @@ function bindEvents() {
     requestNativePreviewSurfaceSync();
   }, true);
   window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !elements.moreMenu.hidden) {
+      setMoreMenuOpen(false);
+      elements.moreButton.focus();
+      return;
+    }
     if (handleSubtitleStyleShortcut(event)) return;
     if (shouldUseHistoryShortcut(event)) {
       event.preventDefault();

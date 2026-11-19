@@ -49,7 +49,7 @@ class Element {
   assert.equal(elements.runtimePause.disabled, true, 'Idle pause must be disabled');
   assert.equal(elements.runtimeEditions.children[0].children[0].textContent, 'CPU OCR');
   const sizeText = elements.runtimeEditions.children[1].children[2].textContent;
-  assert.ok(!sizeText.includes('SubtitleYC 0.6.0'), 'Keep version metadata out of the main card');
+  assert.ok(!sizeText.includes('SubtitleYC 0.7.0'), 'Keep version metadata out of the main card');
   assert.ok(!sizeText.includes('VideOCR'), 'Engine version belongs in collapsed details');
   assert.ok(sizeText.includes('Download size:') && sizeText.includes('Space after installation:'));
   assert.ok(sizeText.includes('Free space needed to install now:'));

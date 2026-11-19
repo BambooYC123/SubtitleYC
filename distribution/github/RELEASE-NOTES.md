@@ -1,28 +1,36 @@
-# SubtitleYC v0.6.0
+# SubtitleYC v0.7.0
 
 SubtitleYC is a free and open-source Windows app for extracting, reviewing,
-and editing frame-timed subtitles from video.
+and editing frame-timed subtitles from burned-in video captions.
 
 SubtitleYC is distributed under the MIT License. Bundled third-party tools
 retain their own licences, which are included with the installation.
 
+Version 0.7.0 brings extraction and editing into one redesigned workspace. The
+new timeline, clearer OCR controls, and expanded cue editor make it easier to
+move from a video to reviewed subtitles, while this release also strengthens
+cancellation, preview accuracy, and protection against lost work.
+
 ## Changes
 
-- Added a small web installer that downloads and verifies the app and CPU OCR, then installs both. CPU OCR is ready when setup finishes; internet is required during installation.
-- Added optional Nvidia GPU OCR in **GPU OCR**, with local GPU/driver checks, download progress, pause/resume, and checksum verification.
-- Clarified download size, installed disk usage, temporary installation space, and the estimated combined app/OCR size. The UI distinguishes SubtitleYC 0.6.0 from the VideOCR 1.5.1 engine.
-- The welcome screen recognizes the installed CPU package and offers optional GPU setup.
-- Added a clearer GPU OCR panel with compatibility checks, a compact installed-CPU status, and expandable storage/download details. Enable **GPU Acceleration** after installing GPU OCR to use it.
-- Improved video scrubbing by batching rapid slider updates and preserving the final seek position.
-- Kept long video titles clear of preview buttons and added a full-title tooltip.
-- Fixed native video covering dialogs and added protection for unsaved subtitle edits.
+- Redesigned the interface around **Extract** and **Edit** modes with a shared light or dark appearance. The extraction workspace now has a collapsible settings column, editable **Fast**, **Balanced**, and **Accurate** OCR profiles, and a separate advanced-settings panel.
+- Added a timeline below the video. Subtitle cues appear as blocks; extraction ranges can be set with draggable **IN** and **OUT** markers, and cue edges can be dragged in the editor to adjust timing.
+- Expanded the subtitle editor with a roomier cue grid, `mm:ss.mmm` time fields, frame-step controls, duration and reading-speed details, find and replace, and warnings for fast, overlapping, or empty cues.
+- Improved the video stage with aspect-ratio-aware framing, a sharper preview on scaled displays, accurate frame decoding near the end of a video, and a crop box with corner handles and a size readout.
+- Added clearer job progress and contextual **Edit**, **Upload**, **Save**, and **Export** actions. Errors stay concise and link directly to filtered logs, while Logs and Settings now open as centred dialogs.
+- Added confirmation before detaching a video or subtitle file from the preview, plus stronger guards against replacing or losing unsaved subtitle edits.
+- Stopping a job or closing the app now terminates OCR, download, and child processes completely. Failed or cancelled OCR runs preserve the subtitles already attached to the project.
+- Fixed GPU-only OCR installations failing when **GPU Acceleration** was switched off. A GPU build now always runs with GPU processing enabled.
+- Added WebVTT (`.vtt`) subtitle import and fixed `.ass` and `.txt` exports so editor style markup is translated or removed correctly.
+- Improved pasted-link handling by extracting URLs from phone share text and recognising supported `rednote.com` note links.
+- Fixed the Simplified Chinese setup page displaying as question marks and updated Pillow, yt-dlp, and other bundled libraries.
 
 ## Install
 
-Download and run `SubtitleYC-0.6.0-windows-setup.exe` with an internet connection.
+Download and run `SubtitleYC-0.7.0-windows-setup.exe` with an internet connection.
 Setup downloads the app and CPU OCR from this release and verifies their SHA-256 hashes before removing an older installation. CPU OCR runs locally afterward.
 
-`SubtitleYC-0.6.0-windows-app.zip` and the `SubtitleYC-0.6.0-ocr-*.zip` files are payloads used by setup or the app. Users do not need to extract them manually.
+`SubtitleYC-0.7.0-windows-app.zip` and the `SubtitleYC-0.7.0-ocr-*.zip` files are payloads used by setup or the app. Users do not need to extract them manually.
 
 The three payload ZIPs are not standalone installers. Use the setup EXE for installation.
 
@@ -35,6 +43,7 @@ stay separately under `%LOCALAPPDATA%\SubtitleYC\runtimes` across updates and un
 - OCR accuracy depends on language, image quality, crop, and source frame rate.
 - Video websites change independently; yt-dlp workflows can require app updates.
 - GPU runtime downloads are large. Download sizes are shown before you start.
+- The Fast and Accurate profiles are starting points and have not been tuned against a benchmark.
 - {{SIGNING_STATUS}}
 
 ## Verify the Download
@@ -43,7 +52,7 @@ GitHub displays a SHA-256 digest beside each installer asset. To calculate the
 digest of a downloaded installer in PowerShell:
 
 ```powershell
-Get-FileHash .\SubtitleYC-0.6.0-windows-setup.exe -Algorithm SHA256
+Get-FileHash .\SubtitleYC-0.7.0-windows-setup.exe -Algorithm SHA256
 ```
 
 Compare the result with the digest shown on the release page before installation.

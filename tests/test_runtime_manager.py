@@ -166,7 +166,7 @@ def test_installer_cpu_is_detected_and_included_in_size(tmp_path):
     assert snapshot["editions"][0]["installed"]
     assert snapshot["editions"][0]["required_free_bytes"] == 0
     assert snapshot["current_install_bytes"] == 1234 + item["unpacked_bytes"]
-    assert snapshot["app_version"] == "0.6.0"
+    assert snapshot["app_version"] == "0.7.0"
     assert manager.start("cpu")["status"] == "ready"
     assert manager.worker is None
 

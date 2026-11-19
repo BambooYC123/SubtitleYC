@@ -4,12 +4,12 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from threading import Event
 from typing import Callable
 
-from .process import popen_hidden_subprocess
+from .process import popen_hidden_subprocess, stop_process_tree
 
 ProgressCallback = Callable[[float, str], None]
 ProcessCallback = Callable[[subprocess.Popen[str]], None]
@@ -66,6 +66,36 @@ def _runtime_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
+def is_gpu_build(cli_path: str | Path | None) -> bool:
+    """True when the CLI lives in a GPU package folder (for example videocr-cli-GPU-v1.5.1-CUDA-12.9)."""
+
+    if not cli_path:
+        return False
+    return any("gpu" in part.casefold() for part in Path(cli_path).parts[-3:-1])
+
+
+def settings_for_cli(cli_path: str | Path, settings: VideOCRCliSettings) -> VideOCRCliSettings:
+    """Adjust settings to what the chosen build can actually run.
+
+    The GPU package's PaddlePaddle crashes in CPU mode on the PP-OCRv5 models
+    ("ConvertPirAttribute2RuntimeAttribute not support" from its oneDNN path), so
+    when the GPU build is the one in use, it always runs on the GPU.
+    """
+
+    if is_gpu_build(cli_path) and not settings.use_gpu:
+        return replace(settings, use_gpu=True)
+    return settings
+
+
+def _cli_preference(path: Path, prefer_gpu: bool) -> tuple[int, list[int], str]:
+    """Sort key: the build matching the requested mode first, then the newest version."""
+
+    text = str(path).casefold()
+    version = re.search(r"v(\d+(?:\.\d+)+)", text)
+    newest_first = [-int(part) for part in version.group(1).split(".")] if version else [0]
+    return (0 if ("gpu" in text) == prefer_gpu else 1, newest_first, text)
+
+
 def find_videocr_cli(prefer_gpu: bool = False) -> str | None:
     from .runtime_manager import manager
 
@@ -92,12 +122,7 @@ def find_videocr_cli(prefer_gpu: bool = False) -> str | None:
         installed_candidates = [
             path for path in installed_candidates if "cpu" not in str(path).casefold()
         ]
-    installed_candidates.sort(
-        key=lambda path: (
-            0 if "gpu" in str(path).casefold() else 1,
-            str(path).casefold(),
-        )
-    )
+    installed_candidates.sort(key=lambda path: _cli_preference(path, prefer_gpu))
     candidates.extend(installed_candidates)
     for candidate in candidates:
         if candidate.is_file():
@@ -113,12 +138,7 @@ def find_videocr_cli(prefer_gpu: bool = False) -> str | None:
                     for path in matches
                     if "gpu" in str(path).casefold() or path.parent == root
                 ]
-            matches.sort(
-                key=lambda path: (
-                    0 if "gpu" in str(path).casefold() else 1,
-                    str(path).casefold(),
-                )
-            )
+            matches.sort(key=lambda path: _cli_preference(path, prefer_gpu))
             if matches:
                 return str(matches[0])
     return None
@@ -188,7 +208,10 @@ def seconds_to_cli_time(seconds: float) -> str:
 
 
 def count_srt_cues(text: str) -> int:
-    return len(re.findall(r"(?m)^\s*\d+\s*$", text))
+    # Parse real cues: a bare-number line can also be subtitle text (e.g. "2024").
+    from .srt import parse_srt
+
+    return len(parse_srt(text))
 
 
 def _runtime_env(runtime_dir: Path) -> dict[str, str]:
@@ -317,6 +340,7 @@ def run_videocr_cli(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.unlink(missing_ok=True)
 
+    settings = settings_for_cli(cli, settings)
     args = [cli, *_build_args(video_path, output_path, settings)]
     env = _runtime_env(runtime_dir)
     if progress:
@@ -341,35 +365,29 @@ def run_videocr_cli(
     def _cancelled() -> bool:
         return bool(cancel_event and cancel_event.is_set())
 
-    def _stop_process() -> None:
-        if process.poll() is not None:
-            return
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
     assert process.stdout is not None
-    while True:
-        if _cancelled():
-            _stop_process()
-            raise VideOCRCancelled("VideOCR job was cancelled.")
-        chunk = process.stdout.read(1)
-        if chunk == "" and process.poll() is not None:
-            break
-        if not chunk:
-            continue
-        if chunk in "\r\n":
-            clean = re.sub(r"\s+", " ", segment).strip()
-            if clean:
-                messages.append(clean)
-                parsed = _progress_from_message(clean)
-                if parsed and progress:
-                    progress(*parsed)
-            segment = ""
-        else:
-            segment += chunk
+    try:
+        while True:
+            if _cancelled():
+                raise VideOCRCancelled("VideOCR job was cancelled.")
+            chunk = process.stdout.read(1)
+            if chunk == "" and process.poll() is not None:
+                break
+            if not chunk:
+                continue
+            if chunk in "\r\n":
+                clean = re.sub(r"\s+", " ", segment).strip()
+                if clean:
+                    messages.append(clean)
+                    parsed = _progress_from_message(clean)
+                    if parsed and progress:
+                        progress(*parsed)
+                segment = ""
+            else:
+                segment += chunk
+    finally:
+        # Also covers a progress callback that raises: never leave OCR running unattended.
+        stop_process_tree(process)
 
     clean = re.sub(r"\s+", " ", segment).strip()
     if clean:

@@ -25,16 +25,18 @@ from typing import Any
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 from . import __release__, __version__
 from .atomic_files import save_text
 from .gpu_compatibility import gpu_compatibility
 from .runtime_manager import manager as runtime_manager
 from .logs import clear_log_entries, configure_logging, get_log_entries, install_crash_logging, log_event, record_crash
-from .security import validate_public_http_url
+from .process import stop_process_tree
+from .security import clean_video_url, validate_public_http_url
 from .srt import SubtitleCue, adjust_cue_timing, cues_to_ass, cues_to_srt, cues_to_txt, parse_ass, parse_srt
 from .videocr_cli import (
+    is_gpu_build,
     VideOCRCancelled,
     VideOCRCliSettings,
     count_srt_cues,
@@ -481,7 +483,7 @@ def _subtitle_cues_response(session: VideoSession) -> dict[str, Any]:
 
 def _subtitle_import_format(filename: str | None) -> str | None:
     suffix = Path(filename or "").suffix.casefold()
-    if suffix == ".srt":
+    if suffix in {".srt", ".vtt"}:
         return "srt"
     if suffix in {".ass", ".ssa"}:
         return "ass"
@@ -543,7 +545,10 @@ def _subtitle_cue_from_request(cue: SubtitleCueRequest) -> SubtitleCue:
 
 def _save_subtitle_cues(session_id: str, request: SubtitleEditRequest) -> dict[str, Any]:
     session = _get_session(session_id)
-    subtitle_format = _normalize_subtitle_format(request.subtitle_format or session.subtitle_format)
+    try:
+        subtitle_format = _normalize_subtitle_format(request.subtitle_format or session.subtitle_format)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     cues = sorted(
         (cue for cue in (_subtitle_cue_from_request(item) for item in request.cues) if cue.text),
         key=lambda cue: (cue.start_seconds, cue.end_seconds),
@@ -713,7 +718,7 @@ def _load_local_video_refs() -> list[dict[str, Any]]:
 
 def _save_local_video_refs(refs: list[dict[str, Any]]) -> None:
     try:
-        LOCAL_PROJECTS_PATH.write_text(json.dumps(refs[:200], ensure_ascii=False, indent=2), encoding="utf-8")
+        save_text(LOCAL_PROJECTS_PATH, json.dumps(refs[:200], ensure_ascii=False, indent=2))
     except OSError as exc:
         log_event(f"Could not save local video references: {exc}", category="library", level=logging.WARNING)
 
@@ -762,7 +767,7 @@ def _local_video_entries(limit: int = 200) -> list[dict[str, Any]]:
 
 
 def _validate_remote_url(value: str) -> str:
-    return validate_public_http_url(value)
+    return validate_public_http_url(clean_video_url(value))
 
 
 def _ensure_free_disk(path: Path, required_bytes: int = 0) -> None:
@@ -977,14 +982,41 @@ def _load_settings() -> AppSettings:
     if installer_language:
         payload["ui_language"] = installer_language
         try:
-            SETTINGS_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            save_text(SETTINGS_PATH, json.dumps(payload, indent=2))
         except OSError:
             log_event("Could not persist installer language choice", category="settings", level=logging.WARNING)
-    return AppSettings.model_validate({**_default_settings(), **payload})
+    return _validated_settings(payload)
+
+
+def _validated_settings(payload: dict[str, Any]) -> AppSettings:
+    """Build settings from saved values, dropping only the ones that no longer validate.
+
+    A single out-of-range or renamed value (hand edit, older release) must not stop
+    the app from opening videos, which read these defaults on every load.
+    """
+
+    defaults = _default_settings()
+    merged = {**defaults, **{key: value for key, value in payload.items() if key in defaults}}
+    try:
+        return AppSettings.model_validate(merged)
+    except ValidationError as exc:
+        rejected = sorted({str(error["loc"][0]) for error in exc.errors() if error.get("loc")})
+        for key in rejected:
+            if key in defaults:
+                merged[key] = defaults[key]
+        log_event(
+            f"Ignored invalid saved settings: {', '.join(rejected) or 'unknown'}",
+            category="settings",
+            level=logging.WARNING,
+        )
+        try:
+            return AppSettings.model_validate(merged)
+        except ValidationError:
+            return AppSettings.model_validate(defaults)
 
 
 def _save_settings(settings: AppSettings) -> AppSettings:
-    SETTINGS_PATH.write_text(json.dumps(settings.model_dump(), indent=2), encoding="utf-8")
+    save_text(SETTINGS_PATH, json.dumps(settings.model_dump(), indent=2))
     log_event("Settings saved", category="settings")
     return settings
 
@@ -1020,14 +1052,24 @@ def _unregister_job_process(job_id: str) -> None:
 
 
 def _stop_registered_process(process: subprocess.Popen[Any] | None) -> None:
-    if process is None or process.poll() is not None:
-        return
-    process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
+    stop_process_tree(process)
+
+
+def stop_all_jobs() -> None:
+    """Cancel every job and stop its processes when the app window closes.
+
+    Without this a running OCR or download keeps the closed app alive in the
+    background, still holding the single-instance lock, so it cannot be reopened.
+    """
+
+    with state_lock:
+        for job_id, job in jobs.items():
+            if job.status in {"queued", "running"}:
+                job_cancel_events.setdefault(job_id, threading.Event()).set()
+        processes = list(job_processes.values())
+    for process in processes:
+        stop_process_tree(process)
+    executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _mark_job_cancelled(job_id: str, message: str = "Cancelled") -> None:
@@ -1050,9 +1092,23 @@ def _set_job(job_id: str, **updates: Any) -> None:
         log_event(message, category=category, level=level, job_id=logged_job_id)
 
 
+FINISHED_JOB_HISTORY = 200
+
+
+def _prune_finished_jobs() -> None:
+    """Drop the oldest finished jobs. The caller holds state_lock."""
+
+    finished = [job_id for job_id, job in jobs.items() if job.status in {"complete", "failed", "cancelled"}]
+    for job_id in finished[: max(0, len(finished) - FINISHED_JOB_HISTORY)]:
+        jobs.pop(job_id, None)
+        job_cancel_events.pop(job_id, None)
+        job_processes.pop(job_id, None)
+
+
 def _create_job(kind: str) -> Job:
     job = Job(id=uuid.uuid4().hex, kind=kind)
     with state_lock:
+        _prune_finished_jobs()
         jobs[job.id] = job
     log_event(f"{kind} job queued", category=kind, job_id=job.id)
     return job
@@ -1075,11 +1131,6 @@ def _submit_job(job: Job, func: Any, *args: Any) -> None:
                 _set_job(job.id, status="failed", error=str(exc), message=f"{job.kind} crashed")
 
     future.add_done_callback(handle_done)
-
-def _sanitize_name(value: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", value).strip("._")
-    return cleaned[:120] or "video"
-
 
 _WINDOWS_RESERVED_FILE_STEMS = {
     "CON", "PRN", "AUX", "NUL",
@@ -1933,7 +1984,10 @@ def _download_with_ytdlp(
             job_id=job_id,
         )
 
+        furthest_progress = 0.05
+
         def hook(event: dict[str, Any]) -> None:
+            nonlocal furthest_progress
             _ensure_free_disk(output_dir)
             _raise_if_cancelled(job_id)
             if event.get("status") == "downloading":
@@ -1942,13 +1996,12 @@ def _download_with_ytdlp(
                 ratio = downloaded / total if total else 0
                 speed = event.get("speed") or 0
                 speed_text = f" at {speed / 1024 / 1024:.1f} MB/s" if speed else ""
-                _set_job(
-                    job_id,
-                    progress=min(0.88, 0.05 + ratio * 0.75),
-                    message=f"Downloading video{speed_text}",
-                )
+                # Video and audio arrive as separate transfers that each restart at 0%.
+                furthest_progress = max(furthest_progress, min(0.88, 0.05 + ratio * 0.75))
+                _set_job(job_id, progress=furthest_progress, message=f"Downloading video{speed_text}")
             elif event.get("status") == "finished":
-                _set_job(job_id, progress=0.9, message="Preparing downloaded video")
+                furthest_progress = max(furthest_progress, 0.88)
+                _set_job(job_id, progress=furthest_progress, message="Preparing downloaded video")
 
         options = {
             "format": selected_format or _download_format(max_height, url),
@@ -2145,11 +2198,14 @@ def _run_ocr_job(job_id: str, session_id: str, request: OCRRequest) -> None:
                 log_event(f"VideOCR {int(clamped * 100)}%: {message}", category="ocr", job_id=job_id)
 
         source_srt_path = _subtitle_storage_path(session, "srt")
+        # VideOCR's output file is deleted before each run. Point it at a scratch file so a
+        # failed or cancelled run leaves subtitles the user already has (and edited) alone.
+        scratch_srt_path = VIDEOCR_RUNTIME_DIR / f"ocr-{job_id}.srt"
         cancel_event = _job_cancel_event(job_id)
         try:
             srt_text = run_videocr_cli(
                 Path(session.video_path),
-                source_srt_path,
+                scratch_srt_path,
                 settings,
                 VIDEOCR_RUNTIME_DIR,
                 progress=progress,
@@ -2159,6 +2215,7 @@ def _run_ocr_job(job_id: str, session_id: str, request: OCRRequest) -> None:
             )
         finally:
             _unregister_job_process(job_id)
+            scratch_srt_path.unlink(missing_ok=True)
         _raise_if_cancelled(job_id)
         srt_text = _normalize_generated_srt_timing(
             srt_text,
@@ -2492,52 +2549,6 @@ def get_video(session_id: str) -> dict[str, Any]:
 
 
 
-def _session_duration(session: VideoSession) -> float:
-    try:
-        return max(0.0, float((session.metadata or {}).get("duration") or 0.0))
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _session_fps(session: VideoSession) -> float:
-    try:
-        return max(0.0, float((session.metadata or {}).get("fps") or 0.0))
-    except (TypeError, ValueError):
-        return 0.0
-
-
-def _frame_time_for_session(session: VideoSession, time_seconds: float) -> tuple[int, float]:
-    duration = _session_duration(session)
-    requested = max(0.0, min(float(time_seconds or 0.0), duration if duration > 0 else float(time_seconds or 0.0)))
-    fps = _session_fps(session)
-    if fps <= 0:
-        return int(round(requested * 1000)), requested
-
-    frame_count = int((session.metadata or {}).get("frame_count") or 0)
-    if frame_count <= 0 and duration > 0:
-        frame_count = int(math.ceil(duration * fps))
-    frame_index = max(0, int(round(requested * fps)))
-    if frame_count > 0:
-        frame_index = min(frame_index, max(0, frame_count - 1))
-    return frame_index, frame_index / fps
-
-
-def _prune_frame_cache(frame_dir: Path, keep_limit: int = FRAME_CACHE_LIMIT) -> None:
-    try:
-        frames = sorted(
-            (path for path in frame_dir.glob("*.jpg") if path.is_file()),
-            key=lambda path: path.stat().st_mtime,
-            reverse=True,
-        )
-    except OSError:
-        return
-    for path in frames[keep_limit:]:
-        try:
-            path.unlink()
-        except OSError:
-            pass
-
-
 @app.get("/api/videos/{session_id}/preview")
 def get_preview(session_id: str) -> Response:
     session = _get_session(session_id)
@@ -2602,6 +2613,11 @@ def refresh_preview(session_id: str, time_seconds: float = 0.0) -> dict[str, Any
 @app.post("/api/videos/{session_id}/ocr")
 def create_ocr_job(session_id: str, request: OCRRequest) -> dict[str, Any]:
     _get_session(session_id)
+    try:
+        _normalize_subtitle_format(request.subtitle_format)
+        map_language(request.language)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not find_videocr_cli(prefer_gpu=request.use_gpu):
         raise HTTPException(
             status_code=409,
@@ -2759,6 +2775,8 @@ def system_status() -> dict[str, Any]:
         "videocr_cli_path": videocr_cli,
         "videocr_gpu_cli": videocr_gpu_cli is not None,
         "videocr_gpu_cli_path": videocr_gpu_cli,
+        # Only the GPU package is installed: OCR always runs on the GPU.
+        "videocr_gpu_only": is_gpu_build(videocr_cli),
         "bundled_tools_dir": str(tools_dir),
         "videocr_build_variant": videocr_build.get("variant"),
         "max_jobs": MAX_WORKERS,

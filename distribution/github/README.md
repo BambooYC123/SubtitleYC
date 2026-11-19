@@ -12,7 +12,7 @@ preview, VideOCR, yt-dlp, and FFmpeg in one desktop workflow.
 Download the latest version from [GitHub Releases]({{REPOSITORY_URL}}/releases/tag/{{RELEASE_TAG}}).
 Do not download SubtitleYC from third-party mirrors.
 
-Download `SubtitleYC-0.6.0-windows-setup.exe` with an internet connection.
+Download `SubtitleYC-0.7.0-windows-setup.exe` with an internet connection.
 Setup downloads and verifies the app, FFmpeg and CPU OCR, then installs them.
 CPU OCR is ready at first launch. Optional Nvidia GPU OCR is available in
 **GPU OCR**, with hardware checks, progress, and pause/resume.

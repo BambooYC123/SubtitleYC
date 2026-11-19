@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ipaddress
+import re
 import socket
 import threading
 import urllib.parse
@@ -51,6 +52,32 @@ def _resolve_public_host(host: str, port: int) -> None:
     except socket.gaierror as exc:
         raise RuntimeError(f"Could not resolve the video URL host: {host}") from exc
     _ensure_public_results(host, results)
+
+
+_URL_IN_TEXT = re.compile(r"https?://[^\s<>\"'\u3000-\u303f\uff00-\uffef\u4e00-\u9fff]+", re.IGNORECASE)
+_REDNOTE_NOTE_PATH = re.compile(r"^/(?:explore|discovery/item)/[0-9a-f]+", re.IGNORECASE)
+
+
+def clean_video_url(value: str) -> str:
+    """Tidy what people actually paste into the link box.
+
+    Phone apps copy a whole sentence around the link ("... https://b23.tv/abc 复制后打开"),
+    so take the first http(s) link out of the text. Rednote note links on rednote.com are
+    the same notes as on xiaohongshu.com, which is the only host yt-dlp recognises.
+    """
+
+    text = str(value or "").strip()
+    match = _URL_IN_TEXT.search(text)
+    if match and match.group(0) != text:
+        text = match.group(0).rstrip(".,;:!?)]}")
+    try:
+        parsed = urllib.parse.urlsplit(text)
+    except ValueError:
+        return text
+    host = (parsed.hostname or "").casefold()
+    if host in {"rednote.com", "www.rednote.com"} and _REDNOTE_NOTE_PATH.match(parsed.path):
+        text = urllib.parse.urlunsplit(("https", "www.xiaohongshu.com", parsed.path, parsed.query, ""))
+    return text
 
 
 def validate_public_http_url(value: str) -> str:

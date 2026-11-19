@@ -5,297 +5,247 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>SubtitleYC</title>
     <link rel="icon" type="image/png" href="/assets/SubtitleYC.png?v=20260705-02" />
-    <link rel="stylesheet" href="/assets/styles.css?v=title-tooltip-web-setup-0.6.0" />
+    <link rel="stylesheet" href="/assets/ui.css?v=0.7.0" />
+    <link rel="stylesheet" href="/assets/styles.css?v=0.7.0" />
   </head>
   <body>
     <main class="app-shell">
-      <header class="topbar">
-        <div class="brand-block">
-          <img class="brand-mark" src="/assets/SubtitleYC.png?v=20260705-02" alt="" aria-hidden="true" />
-          <div>
-            <h1>SubtitleYC</h1>
-            <p id="systemStatus" class="system-status">Checking tools</p>
+      <header class="app-bar">
+        <img class="brand-mark" src="/assets/SubtitleYC.png?v=20260705-02" alt="" aria-hidden="true" />
+        <nav class="mode-tabs" role="tablist" aria-label="Mode">
+          <button id="modeExtractButton" type="button" role="tab" aria-selected="true">Extract</button>
+          <button id="subtitleEditorButton" type="button" role="tab" aria-selected="false" title="Open the subtitle editor (Ctrl+E)" disabled>Edit</button>
+        </nav>
+        <div class="bar-file" id="videoMeta" tabindex="0" aria-describedby="videoTitleTooltip">No video loaded</div>
+        <div id="videoTitleTooltip" class="video-title-tooltip" role="tooltip" data-i18n-skip hidden></div>
+        <span class="bar-spacer"></span>
+        <button id="libraryButton" type="button" aria-pressed="false">Library</button>
+        <button id="settingsButton" class="btn-icon" type="button" aria-pressed="false" title="Settings" aria-label="Settings">
+          <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z" /></svg>
+        </button>
+        <div class="menu-wrap">
+          <button id="moreButton" class="btn-icon" type="button" aria-haspopup="true" aria-expanded="false" title="More" aria-label="More">
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4" /><circle cx="12" cy="12" r="1.4" /><circle cx="19" cy="12" r="1.4" /></svg>
+          </button>
+          <div id="moreMenu" class="menu" hidden>
+            <button data-open-runtimes type="button">GPU OCR</button>
+            <button id="logsButton" type="button" aria-pressed="false">Logs</button>
+            <button id="storageButton" type="button" aria-pressed="false">Storage</button>
+            <button id="copySystemInfoButton" type="button">Copy System Info</button>
           </div>
         </div>
-        <nav class="top-actions" aria-label="Primary navigation">
-          <div class="primary-nav">
-            <button id="libraryButton" class="icon-button settings-button topbar-button" type="button" aria-pressed="false">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg>
-              <span>Library</span>
-            </button>
-            <button id="settingsButton" class="icon-button settings-button topbar-button" type="button" aria-pressed="false">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z" /></svg>
-              <span>Settings</span>
-            </button>
-          </div>
-          <div class="utility-nav" aria-label="Utilities">
-            <button data-open-runtimes class="icon-button settings-button topbar-button" type="button"><span>GPU OCR</span></button>
-            <button id="logsButton" class="icon-button settings-button topbar-button utility-button" type="button" aria-pressed="false" title="Logs" aria-label="Logs">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h10" /></svg>
-            </button>
-            <button id="storageButton" class="icon-button settings-button topbar-button utility-button" type="button" aria-pressed="false" title="Storage" aria-label="Storage">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16" /><path d="M7 7v13" /><path d="M17 7v13" /><path d="M5 20h14" /><path d="M8 4h8" /></svg>
-            </button>
-          </div>
-        </nav>
       </header>
 
-      <section class="workspace-grid">
-        <aside class="control-panel">
-          <section class="panel-section source-section">
-            <div class="section-heading">
-              <h2>Source</h2>
-              <span class="section-hint">Download or open a video</span>
-            </div>
-            <label class="field-group" for="urlInput">
-              <span>URL</span>
-              <input id="urlInput" type="url" placeholder="https://..." autocomplete="off" />
-            </label>
-            <div class="download-dir-row">
-              <label class="field-group download-dir-field" for="downloadDirInput">
-                <span>Video save folder</span>
-                <input id="downloadDirInput" type="text" placeholder="Default URL download folder" autocomplete="off" />
-              </label>
-              <button id="downloadDirButton" class="icon-button folder-button" type="button">
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v1" />
-                  <path d="M3 9h18l-2 10H5z" />
-                </svg>
-                <span>Browse</span>
-              </button>
-            </div>
-            <div class="source-format-tools">
-              <label class="field-group format-field" for="formatInput">
-                <span>Format</span>
-                <select id="formatInput">
-                  <option value="">Best available (recommended)</option>
-                </select>
-              </label>
-              <button id="formatProbeButton" class="icon-button format-probe-button" type="button" disabled>
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 6h16" />
-                  <path d="M4 12h16" />
-                  <path d="M4 18h10" />
-                  <path d="M18 15l3 3-3 3" />
-                </svg>
-                <span>Check Formats</span>
-              </button>
-            </div>
-            <div id="formatProbeSkeleton" class="format-probe-skeleton" aria-live="polite" hidden>
-              <span class="skeleton-line skeleton-line-wide"></span>
-              <span class="skeleton-line"></span>
-              <small>Checking available formats...</small>
-            </div>
-            <details id="subtitleSourceTools" class="source-subtitle-tools">
-              <summary>
-                <span>Video URL subtitles</span>
-                <small>Optional</small>
-              </summary>
-              <div class="source-subtitle-body">
-                <div class="source-subtitle-actions">
-                  <label class="checkbox-row source-subtitle-row">
-                    <input id="downloadSubtitlesInput" type="checkbox" />
-                    Import with video
-                  </label>
-                  <button id="subtitleProbeButton" class="icon-button subtitle-probe-button" type="button" disabled>
-                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M4 7h16" />
-                      <path d="M4 12h10" />
-                      <path d="M4 17h7" />
-                      <path d="M17 14l3 3-3 3" />
-                    </svg>
-                    <span>Check Subtitles</span>
-                  </button>
-                </div>
-                <label id="subtitleTrackRow" class="field-group subtitle-track-row" for="subtitleTrackInput" hidden>
-                  <span>Site subtitle</span>
-                  <select id="subtitleTrackInput"></select>
-                </label>
-                <button id="subtitleDownloadButton" class="icon-button subtitle-download-button" type="button" disabled hidden>
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 3v12" />
-                    <path d="m7 10 5 5 5-5" />
-                    <path d="M5 21h14" />
-                  </svg>
-                  <span>Download Subtitle</span>
+      <section id="workspace" class="workspace">
+        <aside id="inspector" class="pane inspector" aria-label="Source and OCR settings">
+          <div class="inspector-rail">
+            <button id="inspectorShowButton" class="btn-icon" type="button" title="Show settings" aria-label="Show settings">
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+            </button>
+            <span>Source and OCR settings</span>
+          </div>
+          <div class="pane-scroll">
+            <section class="pane-section">
+              <div class="pane-head">
+                <b>Source</b><span>Link or file</span>
+                <span class="head-spacer"></span>
+                <button id="inspectorHideButton" class="btn-icon btn-small" type="button" title="Hide settings" aria-label="Hide settings">
+                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
                 </button>
               </div>
-            </details>
-            <button id="urlButton" class="icon-button source-button" type="button" disabled>
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M10 13a5 5 0 0 0 7.1 0l2.1-2.1a5 5 0 0 0-7.1-7.1l-1.2 1.2" />
-                <path d="M14 11a5 5 0 0 0-7.1 0l-2.1 2.1a5 5 0 0 0 7.1 7.1l1.2-1.2" />
-              </svg>
-              <span>Download Video</span>
-            </button>
-            <div class="source-separator" aria-hidden="true"><span>or</span></div>
-            <input id="fileInput" type="file" accept="video/*" hidden />
-            <button id="videoOpenButton" class="icon-button source-button" type="button" title="Open a video (Ctrl+L)">
-              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H10l2 2h5.5A2.5 2.5 0 0 1 20 8.5v7A2.5 2.5 0 0 1 17.5 18h-11A2.5 2.5 0 0 1 4 15.5z" />
-                <path d="M10 11l4 2.5-4 2.5z" />
-              </svg>
-              <span>Open Video</span>
-            </button>
-            <label class="checkbox-row file-copy-row" title="Only enable this if you want SubtitleYC to keep its own copy for later.">
-              <input id="keepVideoCopyInput" type="checkbox" />
-              <span>Keep a copy in SubtitleYC</span>
-            </label>
-          </section>
+              <div class="pane-body">
+                <input id="urlInput" type="url" placeholder="Paste a video link" aria-label="Video link" autocomplete="off" />
+                <label class="row">
+                  Video quality
+                  <select id="formatInput">
+                    <option value="">Best available (recommended)</option>
+                  </select>
+                </label>
+                <div id="formatProbeSkeleton" class="hint" aria-live="polite" hidden>
+                  <small>Checking available formats...</small>
+                </div>
+                <div class="pair">
+                  <button id="urlButton" type="button" disabled>Download Video</button>
+                  <button id="videoOpenButton" type="button" title="Open a video (Ctrl+L)">Open Video</button>
+                </div>
+                <input id="fileInput" type="file" accept="video/*" hidden />
+              </div>
+              <details class="fold" id="downloadOptions">
+                <summary>Download options <small>folder, site subtitles</small></summary>
+                <div class="pane-body">
+                  <div class="row">
+                    <label for="downloadDirInput">Video save folder</label>
+                    <div class="input-with-button">
+                      <input id="downloadDirInput" type="text" placeholder="Default URL download folder" autocomplete="off" />
+                      <button id="downloadDirButton" type="button">Browse</button>
+                    </div>
+                  </div>
+                  <label class="checkbox-row" title="Only enable this if you want SubtitleYC to keep its own copy for later.">
+                    <input id="keepVideoCopyInput" type="checkbox" />
+                    <span>Keep a copy in SubtitleYC</span>
+                  </label>
+                  <div id="subtitleSourceTools" class="site-subtitles">
+                    <label class="checkbox-row">
+                      <input id="downloadSubtitlesInput" type="checkbox" />
+                      Import with video
+                    </label>
+                    <div class="pair">
+                      <button id="subtitleProbeButton" type="button" disabled>Check Subtitles</button>
+                      <button id="formatProbeButton" type="button" disabled><span>Check Formats</span></button>
+                    </div>
+                    <label id="subtitleTrackRow" class="row" for="subtitleTrackInput" hidden>
+                      Site subtitle
+                      <select id="subtitleTrackInput"></select>
+                    </label>
+                    <button id="subtitleDownloadButton" type="button" disabled hidden>Download Subtitle</button>
+                  </div>
+                </div>
+              </details>
+            </section>
 
-          <section class="panel-section ocr-panel">
-            <div class="section-heading">
-              <h2>VideOCR</h2>
-              <span class="section-hint">Extract subtitles from the cropped region</span>
-            </div>
-
-            <div class="ocr-scroll-area">
-              <div class="settings-group settings-group-static">
-                <div class="group-title">Recognition</div>
-                <div class="settings-grid">
-                  <label>
-                    Language
-                    <select id="languageInput">
-                      <option value="eng+chi_sim">English + Chinese Simplified</option>
-                    </select>
-                  </label>
-                  <label>
-                    Subtitle file
-                    <select id="subtitleFormatInput">
-                      <option value="srt">SubRip (.srt)</option>
-                      <option value="txt">Plain text (.txt)</option>
-                      <option value="ass">Advanced SubStation Alpha (.ass)</option>
-                    </select>
-                  </label>
-                  <label>
-                    Confidence
-                    <input id="confidenceInput" type="range" min="0" max="100" value="65" />
-                    <span id="confidenceValue">65</span>
-                  </label>
-                  <label>
-                    Text similarity
-                    <input id="similarityInput" type="range" min="0" max="100" value="72" />
-                    <span id="similarityValue">0.72</span>
-                  </label>
-                  <label>
-                    SSIM
-                    <input id="ssimInput" type="range" min="0" max="100" value="88" />
-                    <span id="ssimValue">0.88</span>
-                  </label>
+            <section class="pane-section">
+              <div class="pane-head"><b>OCR</b><span>Reads the marked region</span></div>
+              <div class="pane-body">
+                <label class="row">
+                  Language
+                  <select id="languageInput">
+                    <option value="eng+chi_sim">English + Chinese Simplified</option>
+                  </select>
+                </label>
+                <label class="row">
+                  Subtitle file
+                  <select id="subtitleFormatInput">
+                    <option value="srt">SubRip (.srt)</option>
+                    <option value="txt">Plain text (.txt)</option>
+                    <option value="ass">Advanced SubStation Alpha (.ass)</option>
+                  </select>
+                </label>
+                <div class="row">
+                  Profile
+                  <div id="profileButtons" class="seg" role="group" aria-label="Quality profile">
+                    <button type="button" data-profile="fast" aria-pressed="false">Fast</button>
+                    <button type="button" data-profile="balanced" aria-pressed="false">Balanced</button>
+                    <button type="button" data-profile="accurate" aria-pressed="false">Accurate</button>
+                    <button type="button" data-profile="custom" aria-pressed="false" disabled title="Lights up when you change a value yourself">Custom</button>
+                  </div>
+                </div>
+                <label class="row slider">
+                  Confidence
+                  <input id="confidenceInput" type="range" min="0" max="100" value="65" />
+                  <span id="confidenceValue">65</span>
+                </label>
+                <label class="row slider">
+                  Text similarity
+                  <input id="similarityInput" type="range" min="0" max="100" value="72" />
+                  <span id="similarityValue">0.72</span>
+                </label>
+                <label class="row slider">
+                  SSIM
+                  <input id="ssimInput" type="range" min="0" max="100" value="88" />
+                  <span id="ssimValue">0.88</span>
+                </label>
+                <label class="row">
+                  Frames to skip
+                  <input id="frameStepInput" type="number" min="0" max="119" value="0" />
+                </label>
+                <label class="row">
+                  Max OCR width
+                  <input id="maxWidthInput" type="number" min="64" max="4096" value="1280" />
+                </label>
+                <label class="checkbox-row">
+                  <input id="useServerModelInput" type="checkbox" checked />
+                  Use Server Model
+                </label>
+                <div class="advanced-row">
+                  <button id="advancedButton" type="button" aria-expanded="false" aria-controls="advancedPanel">Advanced settings…</button>
+                  <span id="advancedSummary" class="advanced-summary"></span>
                 </div>
               </div>
-
-              <details class="settings-group">
-                <summary class="group-title">
-                  Timing
-                  <span class="group-title-meta">skip, gaps, offset, trim</span>
-                </summary>
-                <div class="settings-grid">
-                  <label>
-                    Frames to skip
-                    <input id="frameStepInput" type="number" min="0" max="119" value="0" />
-                  </label>
-                  <label>
-                    Max merge gap
-                    <input id="mergeGapInput" type="number" min="0" max="10" step="0.01" value="0" />
-                  </label>
-                  <label>
-                    Min duration
-                    <input id="minDurationInput" type="number" min="0" max="10" step="0.0001" value="0.04" />
-                  </label>
-                  <label>
-                    Timing offset (frames)
-                    <input id="timingOffsetInput" type="number" min="-30" max="30" step="0.25" value="0" />
-                  </label>
-                  <label class="checkbox-row settings-check-row">
-                    <input id="snapToFrameInput" type="checkbox" checked />
-                    Snap timing to frames
-                  </label>
-                  <label>
-                    Start
-                    <input id="startInput" type="number" min="0" step="0.01" value="0" />
-                  </label>
-                  <label>
-                    End
-                    <input id="endInput" type="number" min="0" step="0.01" placeholder="Full video" />
-                  </label>
-                </div>
-              </details>
-
-              <details class="settings-group">
-                <summary class="group-title">
-                  Image
-                  <span class="group-title-meta">brightness, scaling</span>
-                </summary>
-                <div class="settings-grid">
-                  <label>
-                    Brightness threshold
-                    <input id="brightnessInput" type="number" min="0" max="255" placeholder="Off" />
-                  </label>
-                  <label>
-                    Max OCR width
-                    <input id="maxWidthInput" type="number" min="64" max="4096" value="1280" />
-                  </label>
-                </div>
-              </details>
-
-              <details class="settings-group engine-group">
-                <summary class="group-title">
-                  Engine
-                  <span class="group-title-meta">model &amp; OCR behavior</span>
-                </summary>
-                <div class="toggle-grid">
-                  <label class="checkbox-row">
-                    <input id="useServerModelInput" type="checkbox" checked />
-                    Use Server Model
-                  </label>
-                  <label class="checkbox-row">
-                    <input id="useGpuInput" type="checkbox" />
-                    Use GPU Acceleration
-                  </label>
-                  <label class="checkbox-row">
-                    <input id="useFullframeInput" type="checkbox" />
-                    Use Full Frame OCR
-                  </label>
-                  <label class="checkbox-row">
-                    <input id="angleClsInput" type="checkbox" />
-                    Enable Angle Classification
-                  </label>
-                  <label class="checkbox-row">
-                    <input id="postProcessingInput" type="checkbox" />
-                    Enable Post Processing
-                  </label>
-                  <label class="checkbox-row">
-                    <input id="normalizeChineseInput" type="checkbox" checked />
-                    Normalize Traditional Chinese
-                  </label>
-                </div>
-              </details>
-            </div>
-
-            <div class="ocr-action-bar">
-              <button id="runButton" class="icon-button wide-button run-button" type="button" disabled>
-                <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 4v16" />
-                  <path d="M9 5l10 7-10 7z" />
-                </svg>
-                <span>Run VideOCR</span>
-              </button>
-            </div>
-          </section>
+            </section>
+          </div>
+          <div class="pane-foot">
+            <button id="runButton" class="btn-primary" type="button" disabled>Run VideOCR</button>
+          </div>
         </aside>
 
-        <section class="preview-panel">
-          <div class="preview-header">
-            <div class="video-meta" id="videoMeta" tabindex="0" aria-describedby="videoTitleTooltip">No video loaded</div>
-            <div id="videoTitleTooltip" class="video-title-tooltip" role="tooltip" data-i18n-skip hidden></div>
-            <div class="preview-header-actions">
-              <button id="removeSubtitlesButton" class="preview-remove-button" type="button" title="Remove current subtitles from the preview" disabled>Remove Subtitles</button>
-              <button id="removeVideoButton" class="preview-remove-button" type="button" title="Remove the current video from the preview" disabled>Remove Video</button>
-              <div class="crop-readout" id="cropReadout">Crop: none</div>
+        <aside id="advancedPanel" class="pane slide-over" aria-label="Advanced OCR settings" hidden>
+          <div class="pane-head">
+            <b>Advanced OCR settings</b>
+            <span class="head-spacer"></span>
+            <button id="advancedCloseButton" class="btn-small" type="button">Close</button>
+          </div>
+          <div class="pane-scroll">
+            <div class="pane-body">
+              <h3>Timing</h3>
+              <label class="row">
+                Max merge gap
+                <input id="mergeGapInput" type="number" min="0" max="10" step="0.01" value="0" />
+              </label>
+              <label class="row">
+                Min duration
+                <input id="minDurationInput" type="number" min="0" max="10" step="0.0001" value="0.04" />
+              </label>
+              <label class="row">
+                Timing offset (frames)
+                <input id="timingOffsetInput" type="number" min="-30" max="30" step="0.25" value="0" />
+              </label>
+              <div class="two">
+                <label class="row">
+                  Start
+                  <input id="startInput" type="number" min="0" step="0.01" value="0" />
+                </label>
+                <label class="row">
+                  End
+                  <input id="endInput" type="number" min="0" step="0.01" placeholder="Full video" />
+                </label>
+              </div>
+              <p class="hint">Start and End are in seconds. They are the IN and OUT markers on the timeline.</p>
+              <label class="checkbox-row">
+                <input id="snapToFrameInput" type="checkbox" checked />
+                Snap timing to frames
+              </label>
+              <h3>Image</h3>
+              <label class="row">
+                Brightness threshold
+                <input id="brightnessInput" type="number" min="0" max="255" placeholder="Off" />
+              </label>
+              <h3>Engine</h3>
+              <div class="two">
+                <label class="checkbox-row">
+                  <input id="useGpuInput" type="checkbox" />
+                  Use GPU Acceleration
+                </label>
+                <label class="checkbox-row">
+                  <input id="useFullframeInput" type="checkbox" />
+                  Use Full Frame OCR
+                </label>
+                <label class="checkbox-row">
+                  <input id="angleClsInput" type="checkbox" />
+                  Enable Angle Classification
+                </label>
+                <label class="checkbox-row">
+                  <input id="postProcessingInput" type="checkbox" />
+                  Enable Post Processing
+                </label>
+                <label class="checkbox-row">
+                  <input id="normalizeChineseInput" type="checkbox" checked />
+                  Normalize Traditional Chinese
+                </label>
+              </div>
             </div>
           </div>
-          <div class="canvas-wrap">
+        </aside>
+
+        <section class="pane viewer" aria-label="Video preview">
+          <div class="pane-head">
+            <b>Viewer</b>
+            <span id="videoSpecs" data-i18n-skip></span>
+            <span class="head-spacer"></span>
+            <span class="crop-readout" id="cropReadout">Crop: none</span>
+            <button id="removeSubtitlesButton" class="link-button" type="button" title="Remove current subtitles from the preview" disabled>Remove Subtitles</button>
+            <button id="removeVideoButton" class="link-button" type="button" title="Remove the current video from the preview" disabled>Remove Video</button>
+          </div>
+          <div class="canvas-wrap stage">
             <video id="videoPlayer" class="video-source" preload="metadata" playsinline muted></video>
             <canvas id="previewCanvas"></canvas>
             <div id="subtitlePreviewOverlay" class="subtitle-preview-overlay" data-i18n-skip hidden></div>
@@ -310,93 +260,51 @@
               <div id="recentProjectList" class="recent-project-list"></div>
             </section>
           </div>
-          <div class="transport-panel">
-            <div class="scrub-track-row">
-              <input id="seekSlider" type="range" min="0" max="0" step="0.001" value="0" disabled />
-            </div>
-            <div class="scrub-controls">
-              <div class="playback-buttons">
-                <button id="prevFrameButton" class="icon-button transport-button" type="button" disabled>
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M6 6v12" />
-                    <path d="M6 12l11-6v12z" />
-                  </svg>
-                  <span>Prev Frame</span>
-                </button>
-                <button id="playButton" class="playback-button" type="button" disabled>Play</button>
-                <button id="nextFrameButton" class="icon-button transport-button" type="button" disabled>
-                  <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M18 6v12" />
-                    <path d="M18 12 7 6v12z" />
-                  </svg>
-                  <span>Next Frame</span>
-                </button>
-              </div>
-              <span id="timeIndicator" class="time-row">Frame: 0 / 0 | Time: 00:00 / 00:00</span>
-            </div>
-            <div class="preview-subtitle-tools" aria-label="Visible subtitle timing">
-              <div class="preview-subtitle-group">
-                <span class="preview-subtitle-group-label">Jump to subtitle</span>
-                <div class="preview-subtitle-jumps">
-                  <button id="previewCuePrevJumpButton" class="icon-button preview-jump-button" type="button" disabled>
-                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
-                    <span>Previous</span>
-                  </button>
-                  <button id="previewCueJumpButton" class="icon-button preview-jump-button" type="button" disabled>
-                    <span>Next</span>
-                    <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                  </button>
-                </div>
-              </div>
-
-              <div class="preview-subtitle-group preview-subtitle-group-nudge" hidden>
-                <span class="preview-subtitle-group-label">Trim visible cue</span>
-                <div class="preview-subtitle-nudges">
-                  <button id="previewCueStartBackButton" type="button" disabled title="Move the visible subtitle start earlier">Start -</button>
-                  <button id="previewCueStartForwardButton" type="button" disabled title="Move the visible subtitle start later">Start +</button>
-                  <button id="previewCueEndBackButton" type="button" disabled title="Move the visible subtitle end earlier">End -</button>
-                  <button id="previewCueEndForwardButton" type="button" disabled title="Move the visible subtitle end later">End +</button>
-                </div>
+          <div class="transport">
+            <button id="previewCuePrevJumpButton" class="glyph" type="button" title="Previous subtitle" aria-label="Previous subtitle" disabled>
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14" /><path d="M19 5 9 12l10 7z" fill="currentColor" /></svg>
+            </button>
+            <button id="prevFrameButton" class="glyph" type="button" title="Previous frame" aria-label="Previous frame" disabled>
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 5 7 12l10 7z" fill="currentColor" /></svg>
+            </button>
+            <button id="playButton" class="play" type="button" disabled>Play</button>
+            <button id="nextFrameButton" class="glyph" type="button" title="Next frame" aria-label="Next frame" disabled>
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 5 10 7-10 7z" fill="currentColor" /></svg>
+            </button>
+            <button id="previewCueJumpButton" class="glyph" type="button" title="Next subtitle" aria-label="Next subtitle" disabled>
+              <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14" /><path d="m5 5 10 7-10 7z" fill="currentColor" /></svg>
+            </button>
+            <span id="timeIndicator" class="timecode" data-i18n-skip><span id="timeCurrent">00:00.000</span><small id="timeTotal">/ 00:00.000</small></span>
+            <span class="frame-readout"><span>Frame</span> <b id="frameCurrent" data-i18n-skip>0</b> / <span id="frameTotal" data-i18n-skip>0</span></span>
+          </div>
+          <div class="timeline">
+            <div id="timeline" class="tl">
+              <div class="tl-ruler"></div>
+              <div class="tl-track">
+                <input id="seekSlider" class="tl-seek" type="range" min="0" max="0" step="0.001" value="0" aria-label="Seek" disabled />
               </div>
             </div>
           </div>
         </section>
       </section>
 
-      <section class="bottom-action-bar" aria-label="Activity">
-        <div class="bottom-status-panel">
-          <div class="bottom-label">Activity</div>
-          <div class="progress-wrap">
-            <div id="activityList" class="activity-list" aria-live="polite"></div>
-          </div>
-        </div>
+      <footer class="status-bar has-actions" aria-label="Activity">
+        <div id="activityList" class="activity-list" aria-live="polite"></div>
         <div class="bottom-actions">
-          <button id="subtitleEditorButton" class="icon-button tool-button subtitle-editor-action" type="button" disabled>
-            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 5h16v10H7l-3 3z" />
-              <path d="M8 9h8" />
-              <path d="M8 12h5" />
-            </svg>
-            <span>SubtitleYC Editor</span>
+          <button id="editSubtitlesButton" type="button" title="Open the subtitle editor (Ctrl+E)">
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v10H7l-3 3z" /><path d="M8 9h8" /><path d="M8 12h5" /></svg>
+            <span class="big-label"><b>Edit subtitles</b><small id="editSubtitlesNote">Nothing to edit yet</small></span>
           </button>
-          <button id="subtitleUploadButton" class="icon-button tool-button" type="button" disabled>
-            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v12" />
-              <path d="M7 8l5-5 5 5" />
-              <path d="M5 21h14" />
-            </svg>
-            <span>Upload Subtitles</span>
+          <button id="subtitleUploadButton" type="button" title="Upload a subtitle file (Ctrl+U)" disabled>
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="M7 8l5-5 5 5" /><path d="M5 21h14" /></svg>
+            <span class="big-label"><b>Upload subtitles</b><small id="subtitleUploadNote">Open a video first</small></span>
           </button>
-          <a id="downloadLink" class="download-link icon-button disabled" href="#" download>
-            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3v12" />
-              <path d="M7 10l5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
-            <span id="downloadLinkLabel">Download .srt</span>
+          <a id="downloadLink" class="download-link disabled" href="#" download>
+            <svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M5 21h14" /></svg>
+            <span class="big-label"><b>Export</b><small id="downloadLinkLabel">Run OCR first</small></span>
           </a>
         </div>
-      </section>
+      </footer>
     </main>
     <div id="logOverlay" class="log-overlay" hidden></div>
     <aside id="logDrawer" class="log-drawer" aria-hidden="true" aria-label="Logs" hidden>
@@ -504,13 +412,13 @@
           <button id="subtitleSnapButton" type="button" title="Snap all cue times to the video frame grid">Snap</button>
         </div>
         <div class="subtitle-actions">
-          <input id="subtitleImportInput" type="file" accept=".srt,.ass,.ssa" hidden />
+          <input id="subtitleImportInput" type="file" accept=".srt,.ass,.ssa,.vtt" hidden />
           <button id="subtitleImportButton" type="button">Upload File</button>
           <button id="subtitleRefreshButton" type="button">Refresh</button>
           <button id="subtitleAddCueButton" type="button">Add Cue</button>
           <button id="subtitleUndoButton" type="button" disabled>Undo</button>
           <button id="subtitleRedoButton" type="button" disabled>Redo</button>
-          <button id="subtitleSaveButton" type="button" disabled>Save</button>
+          <button id="subtitleSaveButton" class="btn-primary" type="button" disabled>Save</button>
         </div>
       </div>
       <div id="subtitleCueList" class="subtitle-cue-list"></div>
@@ -551,9 +459,7 @@
               Default video folder
               <div class="settings-folder-row">
                 <input id="settingDownloadDirInput" type="text" placeholder="Default URL download folder" autocomplete="off" />
-                <button id="settingDownloadDirButton" class="icon-button folder-button" type="button">
-                  <span>Browse</span>
-                </button>
+                <button id="settingDownloadDirButton" type="button">Browse</button>
               </div>
             </label>
 
@@ -662,6 +568,7 @@
         </details>
         <div class="settings-group settings-tool-status">
           <div class="group-title">Tools</div>
+          <p id="systemStatus" class="tool-status">Checking tools</p>
           <div id="settingToolVersionGrid" class="tool-version-grid">
             <div class="tool-version-card">
               <span>SubtitleYC</span>
@@ -676,12 +583,11 @@
               <strong id="settingYtdlpVersion">Checking</strong>
             </div>
           </div>
-          <button id="copySystemInfoButton" class="section-toggle copy-system-info-button" type="button">Copy System Info</button>
         </div>
       </div>
       <div class="settings-actions">
         <button id="settingsResetButton" class="section-toggle" type="button">Reset</button>
-        <button id="settingsSaveButton" type="button">Save Settings</button>
+        <button id="settingsSaveButton" class="btn-primary" type="button">Save Settings</button>
       </div>
     </aside>
     <div id="confirmDialogOverlay" class="confirm-dialog-overlay" hidden>
@@ -712,21 +618,22 @@
       <p id="runtimeIntro" class="runtime-benefit">Speed up subtitle extraction with your Nvidia GPU.</p>
       <div class="runtime-actions">
         <button id="runtimePause" class="section-toggle" type="button" disabled>Pause download</button>
-        <button id="runtimeSkip" type="button">Continue to SubtitleYC</button>
+        <button id="runtimeSkip" class="btn-primary" type="button">Continue to SubtitleYC</button>
       </div>
       <p id="runtimeMessage" role="status" aria-live="polite">Checking GPU OCR…</p>
       <progress id="runtimeProgress" aria-label="Runtime download progress" hidden></progress>
       <div id="runtimeEditions" class="runtime-editions"></div>
       <details class="runtime-extra-details">
         <summary><span>Storage and download sources</span><span class="runtime-details-chevron" aria-hidden="true"></span></summary>
-        <p class="runtime-note"><span id="runtimeStorage"></span> <span id="runtimeCpuStorage"></span> <span id="runtimeGpuStorage"></span> <span>Download size is the compressed package, not a completed download. Installation needs room for both the download and extracted files, plus a safety margin. The compressed package is removed after installation. Sizes use MiB/GiB.</span> <span>The packages are hosted on GitHub:</span> <a href="https://github.com/BambooYC123/SubtitleYC/releases/download/v0.6.0/SubtitleYC-0.6.0-ocr-cpu.zip">CPU OCR package</a> <span>and</span> <a href="https://github.com/BambooYC123/SubtitleYC/releases/download/v0.6.0/SubtitleYC-0.6.0-ocr-gpu-cuda-12.9.zip">Nvidia GPU OCR package</a>. <span>You can close this panel while downloading. If you exit the app, reopen GPU OCR to continue the download.</span></p>
+        <p class="runtime-note"><span id="runtimeStorage"></span> <span id="runtimeCpuStorage"></span> <span id="runtimeGpuStorage"></span> <span>Download size is the compressed package, not a completed download. Installation needs room for both the download and extracted files, plus a safety margin. The compressed package is removed after installation. Sizes use MiB/GiB.</span> <span>The packages are hosted on GitHub:</span> <a href="https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.0/SubtitleYC-0.7.0-ocr-cpu.zip">CPU OCR package</a> <span>and</span> <a href="https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.0/SubtitleYC-0.7.0-ocr-gpu-cuda-12.9.zip">Nvidia GPU OCR package</a>. <span>You can close this panel while downloading. If you exit the app, reopen GPU OCR to continue the download.</span></p>
       </details>
     </dialog>
-    <script src="/assets/i18n.js?v=0.6.0-title-tooltip"></script>
-    <script src="/assets/save-coordinator.js?v=0.6.0"></script>
-    <script src="/assets/preview-overlays.js?v=0.6.0-welcome"></script>
-    <script src="/assets/app.js?v=0.6.0-title-tooltip"></script>
-    <script src="/assets/video-title-tooltip.js?v=0.6.0"></script>
-    <script src="/assets/runtime-manager.js?v=0.6.0-title-tooltip"></script>
+    <script src="/assets/i18n.js?v=0.7.0"></script>
+    <script src="/assets/save-coordinator.js?v=0.7.0"></script>
+    <script src="/assets/preview-overlays.js?v=0.7.0"></script>
+    <script src="/assets/timeline.js?v=0.7.0"></script>
+    <script src="/assets/app.js?v=0.7.0"></script>
+    <script src="/assets/video-title-tooltip.js?v=0.7.0"></script>
+    <script src="/assets/runtime-manager.js?v=0.7.0"></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
-# OCR runtime distribution (0.6.0)
+# OCR runtime distribution (0.7.0)
 
-The recommended download is `SubtitleYC-0.6.0-windows-setup.exe`, a small web installer. It downloads two pinned ZIPs: the app with FFmpeg/ffprobe, and CPU VideOCR. Both hashes are checked before an existing app is uninstalled. Inno Setup extracts and registers all files in one setup flow. CPU OCR is ready at first launch; GPU remains an optional in-app download.
+The recommended download is `SubtitleYC-0.7.0-windows-setup.exe`, a small web installer. It downloads two pinned ZIPs: the app with FFmpeg/ffprobe, and CPU VideOCR. Both hashes are checked before an existing app is uninstalled. Inno Setup extracts and registers all files in one setup flow. CPU OCR is ready at first launch; GPU remains an optional in-app download.
 
 The initial EXE contains setup code and archive support rather than the large payload. Windows checks can still affect startup speed. Internet is required during setup. Failed/cancelled downloads leave the existing app intact; users can retry. Downloads are held in the setup temporary folder and cleaned up when setup exits.
 
@@ -15,7 +15,7 @@ release URLs, sizes, CLI paths and SHA-256 checksums. CPU/GPU must use the same
 VideOCR version. Keep the generated catalog with the corresponding source.
 
 Publish the web EXE, **app payload ZIP and both runtime ZIPs** to the catalog's release tag
-(initially `v0.6.0`). Do not replace runtime assets after publishing: publish a
+(initially `v0.7.0`). Do not replace runtime assets after publishing: publish a
 new app/catalog for changed binaries. Runtime hashes also serve as installation
 identities, so an app update using the same catalog hashes reuses the files.
 `-OfflineInstallers` additionally builds the full CPU/GPU setup ZIPs.
@@ -64,4 +64,4 @@ Native video is hidden while a modal dialog is visible in either workspace, incl
 
 The build measures the core app payload and includes `install-size.json`. The UI estimates app-plus-OCR disk usage from this measurement and the catalog's unpacked sizes; projects, caches, extra models and filesystem allocation overhead are excluded. For a missing runtime, required additional free space equals remaining compressed bytes plus unpacked bytes plus 256 MiB of headroom. An installed runtime requires no additional download space. CPU and GPU coexist; GPU does not replace CPU.
 
-SubtitleYC is version 0.6.0. VideOCR remains engine version 1.5.1; public package filenames use the SubtitleYC release version: `SubtitleYC-0.6.0-ocr-cpu.zip` and `SubtitleYC-0.6.0-ocr-gpu-cuda-12.9.zip`. The engine version remains in the catalog and expandable technical details for traceability. Size units are MiB/GiB.
+SubtitleYC is version 0.7.0. VideOCR remains engine version 1.5.1; public package filenames use the SubtitleYC release version: `SubtitleYC-0.7.0-ocr-cpu.zip` and `SubtitleYC-0.7.0-ocr-gpu-cuda-12.9.zip`. The engine version remains in the catalog and expandable technical details for traceability. Size units are MiB/GiB.

@@ -74,7 +74,8 @@ def probe_video(video_path: Path) -> dict[str, Any]:
         raise VideoToolError("No video stream found")
 
     duration = float(video_stream.get("duration") or data.get("format", {}).get("duration") or 0)
-    fps = parse_fps(video_stream.get("avg_frame_rate") or video_stream.get("r_frame_rate"))
+    # "0/0" is a truthy string, so test the parsed rate before falling back.
+    fps = parse_fps(video_stream.get("avg_frame_rate")) or parse_fps(video_stream.get("r_frame_rate"))
     frame_count = int(video_stream.get("nb_frames") or 0)
     if not frame_count and duration > 0 and fps > 0:
         frame_count = int(math.ceil(duration * fps))

@@ -45,8 +45,8 @@ class LicenseBundleTests(unittest.TestCase):
         requirements = (ROOT / "requirements-release.txt").read_text(encoding="utf-8")
         self.assertIn("Version used by the current Windows build: 6.11.1", notice)
         self.assertIn("pyside6==6.11.1", requirements.lower())
-        self.assertIn("Version bundled by the current Windows build: 2026.7.4", notice)
-        self.assertIn("yt-dlp==2026.7.4", requirements)
+        self.assertIn("Version bundled by the current Windows build: 2026.10.26", notice)
+        self.assertIn("yt-dlp==2026.10.26", requirements)
         self.assertIn("Gyan FFmpeg 8.1.2 full shared build", notice)
 
 
