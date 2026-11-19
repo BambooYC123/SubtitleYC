@@ -394,7 +394,10 @@ if (-not $SkipAppCompile) {
     }
 
     Write-Host "Installing hash-verified release dependencies"
-    Invoke-Checked { & $Python -m pip install --require-hashes --only-binary=:all: -r $LockFile }
+    # proxy-tools 0.1.0 is published only as a source distribution. Its source
+    # archive is still SHA-256 pinned in the lock; every other package must use
+    # a wheel so release builds do not compile arbitrary dependencies.
+    Invoke-Checked { & $Python -m pip install --require-hashes --only-binary=:all: --no-binary=proxy-tools -r $LockFile }
     Invoke-Checked { & $Python -m pip install --no-build-isolation --no-deps -e "." }
     Invoke-Checked { & $Python -m pip check }
     Write-Host "Auditing locked dependencies"

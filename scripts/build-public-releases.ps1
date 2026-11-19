@@ -2,6 +2,7 @@ param(
     [string]$Version = "0.7.0",
     [string]$ReleaseLabel = "0.7.0",
     [switch]$OfflineInstallers,
+    [switch]$ReuseRuntimePackages,
     [Parameter(Mandatory = $true)]
     [string]$CpuVideOCRCliPath,
     [Parameter(Mandatory = $true)]
@@ -150,8 +151,34 @@ Write-Host "Building SubtitleYC with VideOCR v$videOCRVersion across all edition
 
 $releaseDir = Join-Path $ArtifactsRoot "release"
 $packagePython = if ($env:SUBTITLEYC_BUILD_VENV) { Join-Path $env:SUBTITLEYC_BUILD_VENV "Scripts\python.exe" } else { "python" }
-& $packagePython (Join-Path $Root "scripts\package-runtimes.py") --cpu (Split-Path -Parent $CpuVideOCRCliPath) --gpu (Split-Path -Parent $GpuCuda129VideOCRCliPath) --output $releaseDir --release $ReleaseLabel
-if ($LASTEXITCODE -ne 0) { throw "OCR runtime packaging failed." }
+if ($ReuseRuntimePackages) {
+    $catalogPath = Join-Path $Root "assets\runtime-catalog.json"
+    if (-not (Test-Path -LiteralPath $catalogPath -PathType Leaf)) {
+        throw "Runtime catalog is missing: $catalogPath"
+    }
+    $catalog = Get-Content -LiteralPath $catalogPath -Raw | ConvertFrom-Json
+    foreach ($runtime in @(
+        @{ Key = "cpu"; Name = "SubtitleYC-$ReleaseLabel-ocr-cpu.zip" },
+        @{ Key = "gpu-cuda-12.9"; Name = "SubtitleYC-$ReleaseLabel-ocr-gpu-cuda-12.9.zip" }
+    )) {
+        $archivePath = Join-Path $releaseDir $runtime.Name
+        $checksumPath = "$archivePath.sha256"
+        if (-not (Test-Path -LiteralPath $archivePath -PathType Leaf) -or
+            -not (Test-Path -LiteralPath $checksumPath -PathType Leaf)) {
+            throw "Reusable runtime package is missing: $($runtime.Name)"
+        }
+        $record = $catalog.($runtime.Key)
+        $actualSize = (Get-Item -LiteralPath $archivePath).Length
+        $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualSize -ne [int64]$record.size_bytes -or $actualHash -ne [string]$record.sha256) {
+            throw "Reusable runtime package does not match the catalog: $($runtime.Name)"
+        }
+        Write-Host "Reusing verified runtime package: $($runtime.Name)" -ForegroundColor Cyan
+    }
+} else {
+    & $packagePython (Join-Path $Root "scripts\package-runtimes.py") --cpu (Split-Path -Parent $CpuVideOCRCliPath) --gpu (Split-Path -Parent $GpuCuda129VideOCRCliPath) --output $releaseDir --release $ReleaseLabel
+    if ($LASTEXITCODE -ne 0) { throw "OCR runtime packaging failed." }
+}
 $coreArguments = @("-Version", $Version, "-ReleaseLabel", $ReleaseLabel, "-CoreInstaller", "-SkipPortableZip", "-ArtifactsRoot", $ArtifactsRoot) + (Common-SigningArguments)
 if ($FFmpegPath) { $coreArguments += @("-FFmpegPath", $FFmpegPath, "-FFprobePath", $FFprobePath) }
 Invoke-BuildScript -Script $WindowsBuildScript -Arguments $coreArguments
