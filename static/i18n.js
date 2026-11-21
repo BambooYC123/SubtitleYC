@@ -317,6 +317,15 @@ window.SubtitleYCI18n = (() => {
     "No subtitle cues": "没有字幕条目",
     "Load a subtitle file, add a cue, or run VideOCR.": "请加载字幕文件、添加字幕条目或运行 VideOCR。",
     "Seek": "定位",
+    "GPU OCR download": "GPU OCR 下载",
+    "CPU OCR download": "CPU OCR 下载",
+    "Resume": "继续",
+    "Retry": "重试",
+    "Verifying download": "正在校验下载",
+    "Installing": "正在安装",
+    "Ready. GPU Acceleration is now on.": "已就绪。GPU 加速已开启。",
+    "Download could not start": "无法开始下载",
+    "GPU Acceleration is turned on automatically when the download finishes.": "下载完成后会自动开启 GPU 加速。",
     "View logs": "查看日志",
     "The installed OCR package runs on the GPU only.": "已安装的 OCR 包只能在 GPU 上运行。",
     "Remove subtitles from the preview?": "从预览中移除字幕？",
@@ -513,6 +522,9 @@ window.SubtitleYCI18n = (() => {
   };
 
   const patterns = [
+    [/^([\d.]+ [MG]iB) of ([\d.]+ [MG]iB) at ([\d.]+ [MG]iB)\/s$/, "$1 / $2，速度 $3/s"],
+    [/^([\d.]+ [MG]iB) of ([\d.]+ [MG]iB)$/, "$1 / $2"],
+    [/^Paused at ([\d.]+ [MG]iB) of ([\d.]+ [MG]iB)$/, "已暂停：$1 / $2"],
     [/^(\d+) cues? to review$/, "$1 条字幕待检查"],
     [/^(\d+) cues? as \.(srt|txt|ass)$/, "$1 条字幕，导出为 .$2"],
     [/^As \.(srt|txt|ass)$/, "导出为 .$1"],

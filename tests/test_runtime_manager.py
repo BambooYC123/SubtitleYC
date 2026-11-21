@@ -131,6 +131,9 @@ def test_welcome_dismissal_persists(tmp_path, monkeypatch):
     from subtitleyc import main
 
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    # A PC with no OCR engine yet and no answer from setup: the panel has something to offer.
+    monkeypatch.setattr(main, "find_videocr_cli", lambda prefer_gpu=False: None)
+    monkeypatch.setattr(main, "_read_installer_gpu_choice", lambda: None)
     client = TestClient(main.app)
     headers = {"X-SubtitleYC-Token": main.API_TOKEN}
     assert client.post("/api/onboarding/complete").status_code == 401
@@ -166,7 +169,7 @@ def test_installer_cpu_is_detected_and_included_in_size(tmp_path):
     assert snapshot["editions"][0]["installed"]
     assert snapshot["editions"][0]["required_free_bytes"] == 0
     assert snapshot["current_install_bytes"] == 1234 + item["unpacked_bytes"]
-    assert snapshot["app_version"] == "0.7.0"
+    assert snapshot["app_version"] == "0.7.1"
     assert manager.start("cpu")["status"] == "ready"
     assert manager.worker is None
 

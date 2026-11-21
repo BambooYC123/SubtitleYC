@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.1
+
+SubtitleYC 0.7.1 makes optional Nvidia GPU OCR part of the guided installation flow. Setup can check the local GPU and driver, remember the user’s choice, and hand a resumable first-launch download to the app without delaying the core CPU installation.
+
+- Added an **OCR engines** setup page in English and Simplified Chinese. CPU OCR remains required and works on every supported PC; GPU OCR is offered when setup detects a supported Nvidia GTX 16 or RTX 20–50 card with driver 576.57 or newer.
+- Supported systems have GPU OCR selected by default, with its download and installed sizes shown before installation. It can be declined and remains available later from **GPU OCR** in the app.
+- When GPU OCR is selected during setup, SubtitleYC starts the download automatically on first launch and shows progress in the bottom activity bar without forcing the runtime dialog to stay open.
+- Added pause, resume, retry, verification, and installation states to the activity bar. Pausing an automatic download prevents it from restarting on the next launch.
+- GPU Acceleration is enabled automatically after the selected GPU runtime finishes installing.
+- Improved first-launch onboarding so unsupported systems are not shown an irrelevant GPU prompt, while systems with no OCR engine still receive setup guidance.
+- Added Simplified Chinese translations for the new installer choices and runtime-download progress messages.
+
 ## 0.7.0
 
 SubtitleYC 0.7.0 brings extraction and editing into one redesigned workspace. The new timeline, clearer OCR controls, and expanded cue editor make it easier to move from a video to reviewed subtitles, while this release also strengthens cancellation, preview accuracy, and protection against lost work.

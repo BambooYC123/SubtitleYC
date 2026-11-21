@@ -3909,6 +3909,105 @@ function setAdvancedPanelOpen(open) {
   requestNativePreviewSurfaceSync();
 }
 
+// ---- OCR package downloads in the bottom bar ----
+// The runtime manager on the server does the work (resume, checksum, install). This
+// follows it, offers Pause and Resume, and switches GPU Acceleration on when GPU OCR arrives.
+const RUNTIME_ACTIVITY_ID = "runtime";
+let runtimeTrackTimer = null;
+let runtimeInProgress = false;
+
+function runtimeSizeText(bytes) {
+  const value = Math.max(0, Number(bytes || 0));
+  return value >= 1024 ** 3 ? `${(value / 1024 ** 3).toFixed(2)} GiB` : `${Math.round(value / 1024 ** 2)} MiB`;
+}
+
+async function startRuntimeDownload(edition) {
+  const label = edition === "cpu" ? "CPU OCR download" : "GPU OCR download";
+  try {
+    await fetchJson(`/api/runtimes/${encodeURIComponent(edition)}/download`, { method: "POST" });
+  } catch (error) {
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      kind: "runtime", label, message: messageText(error?.message, "Download could not start"), progress: 0,
+      status: "failed", cancelable: false, actionLabel: "Retry", action: () => startRuntimeDownload(edition),
+    });
+    return;
+  }
+  runtimeInProgress = true;
+  await trackRuntimeDownload();
+}
+
+async function pauseRuntimeDownload() {
+  await fetchJson("/api/runtimes/pause", { method: "POST" }).catch((error) => setStatus(error.message || error, 0));
+  await trackRuntimeDownload();
+}
+
+async function enableGpuAcceleration() {
+  await refreshSystemInfo().catch(() => undefined);
+  if (elements.useGpuInput.disabled && !elements.useGpuInput.checked) return false;
+  elements.useGpuInput.checked = true;
+  if (elements.settingUseGpuInput) elements.settingUseGpuInput.checked = true;
+  refreshInspectorState();
+  await persistSettings().catch(() => undefined);
+  return elements.useGpuInput.checked;
+}
+
+async function trackRuntimeDownload() {
+  window.clearTimeout(runtimeTrackTimer);
+  let data;
+  try {
+    data = await fetchJson("/api/runtimes");
+  } catch (_error) {
+    runtimeTrackTimer = window.setTimeout(trackRuntimeDownload, 2500);
+    return;
+  }
+  const edition = data.edition;
+  if (!edition) return;
+  const label = edition === "cpu" ? "CPU OCR download" : "GPU OCR download";
+  const resume = () => startRuntimeDownload(edition);
+  const base = { kind: "runtime", label, cancelable: false };
+  const working = Boolean(data.active) || ["downloading", "verifying", "installing"].includes(data.status);
+  if (data.status === "downloading") {
+    const speed = data.speed > 0 ? ` at ${runtimeSizeText(data.speed)}/s` : "";
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      ...base, status: "running", progress: data.total ? data.bytes / data.total : 0,
+      message: `${runtimeSizeText(data.bytes)} of ${runtimeSizeText(data.total)}${speed}`,
+      actionLabel: "Pause", action: pauseRuntimeDownload,
+    });
+  } else if (data.status === "verifying" || data.status === "installing") {
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      ...base, status: "running", progress: data.status === "verifying" ? 0.97 : 0.99,
+      message: data.status === "verifying" ? "Verifying download" : "Installing", actionLabel: null, action: null,
+    });
+  } else if (data.status === "paused") {
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      ...base, status: "paused", progress: data.total ? data.bytes / data.total : 0,
+      message: `Paused at ${runtimeSizeText(data.bytes)} of ${runtimeSizeText(data.total)}`,
+      actionLabel: "Resume", action: resume,
+    });
+  } else if (data.status === "error") {
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      ...base, status: "failed", progress: 0, message: messageText(data.error, "Download failed"),
+      actionLabel: "Resume", action: resume,
+    });
+  } else if (data.status === "ready" && runtimeInProgress) {
+    const gpuOn = edition !== "cpu" && (await enableGpuAcceleration());
+    if (edition === "cpu") await refreshSystemInfo().catch(() => undefined);
+    setActivity(RUNTIME_ACTIVITY_ID, {
+      ...base, status: "complete", progress: 1, actionLabel: null, action: null,
+      message: gpuOn ? "Ready. GPU Acceleration is now on." : "Ready",
+    });
+    scheduleActivityRemoval(RUNTIME_ACTIVITY_ID, 20000);
+  }
+  runtimeInProgress = working;
+  if (working) runtimeTrackTimer = window.setTimeout(trackRuntimeDownload, 1000);
+}
+
+window.subtitleycStartRuntimeDownload = startRuntimeDownload;
+window.subtitleycTrackRuntime = () => {
+  runtimeInProgress = true;
+  return trackRuntimeDownload();
+};
+
 const INSPECTOR_FOLDED_STORAGE_KEY = "subtitleyc:inspector-folded";
 
 // Folds the settings column to a rail. The choice is remembered between launches.

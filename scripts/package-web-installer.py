@@ -8,7 +8,9 @@ from pathlib import Path
 
 def package(dist: Path, output: Path, version: str, catalog: Path) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    cpu = json.loads(catalog.read_text(encoding="utf-8-sig"))["cpu"]
+    editions = json.loads(catalog.read_text(encoding="utf-8-sig"))
+    cpu = editions["cpu"]
+    gpu = editions.get("gpu-cuda-12.9")
     if not cpu["url"].startswith(f"https://github.com/BambooYC123/SubtitleYC/releases/download/v{version}/"):
         raise ValueError("CPU payload URL must match the web installer's version")
     if not (dist / "SubtitleYC.exe").is_file():
@@ -41,6 +43,10 @@ def package(dist: Path, output: Path, version: str, catalog: Path) -> None:
         "WebDownloadMiB": f'{(archive.stat().st_size + cpu["size_bytes"]) / 1024**2:.0f}',
         "WebInstalledGiB": f'{(value["app_size_bytes"] + cpu["unpacked_bytes"]) / 1024**3:.2f}',
     }
+    if gpu:
+        # Shown on setup's OCR engines page; the app does the download itself on first launch.
+        definitions["GpuDownloadGiB"] = f'{gpu["size_bytes"] / 1024**3:.2f}'
+        definitions["GpuInstalledGiB"] = f'{gpu["unpacked_bytes"] / 1024**3:.2f}'
     (output / "web-payload.iss").write_text("\n".join(
         f'#define {key} {json.dumps(value)}' for key, value in definitions.items()
     ), encoding="utf-8")

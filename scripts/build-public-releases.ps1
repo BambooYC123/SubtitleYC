@@ -1,6 +1,6 @@
 param(
-    [string]$Version = "0.7.0",
-    [string]$ReleaseLabel = "0.7.0",
+    [string]$Version = "0.7.1",
+    [string]$ReleaseLabel = "0.7.1",
     [switch]$OfflineInstallers,
     [switch]$ReuseRuntimePackages,
     [Parameter(Mandatory = $true)]

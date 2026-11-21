@@ -9,6 +9,7 @@ import time
 import unittest
 from pathlib import Path
 from unittest import mock
+from unittest.mock import patch
 
 _DATA_DIR = tempfile.mkdtemp(prefix="subtitleyc-review-tests-")
 os.environ.setdefault("SUBTITLEYC_DATA_DIR", _DATA_DIR)
@@ -255,3 +256,53 @@ class PastedLinkTests(unittest.TestCase):
         self.assertEqual(clean_video_url("https://www.rednote.com/user/profile/123"), "https://www.rednote.com/user/profile/123")
         self.assertEqual(clean_video_url("https://x.com/a/status/1?s=20"), "https://x.com/a/status/1?s=20")
         self.assertEqual(clean_video_url("not a link"), "not a link")
+
+
+class GpuSetupChoiceTests(unittest.TestCase):
+    """Setup records whether GPU OCR was wanted; the app acts on it at first launch."""
+
+    def test_onboarding_decision(self) -> None:
+        from subtitleyc.main import onboarding_decision
+
+        supported = {"installed": False, "compatibility": {"compatible": True}}
+        unsupported = {"installed": False, "compatibility": {"compatible": False}}
+        installed = {"installed": True, "compatibility": {"compatible": True}}
+
+        # Box ticked on a supported PC: download by itself, no panel.
+        self.assertEqual(
+            onboarding_decision(seen=True, auto_requested=True, gpu=supported, ocr_available=True),
+            {"auto_gpu_download": True, "show_welcome": False},
+        )
+        # Ticked, but the card is no longer supported or the package is already there: nothing to do.
+        for gpu in (unsupported, installed, None):
+            self.assertFalse(onboarding_decision(seen=True, auto_requested=True, gpu=gpu, ocr_available=True)["auto_gpu_download"])
+        # No answer from setup (portable or older installer): offer once on a supported PC only.
+        self.assertTrue(onboarding_decision(seen=False, auto_requested=False, gpu=supported, ocr_available=True)["show_welcome"])
+        self.assertFalse(onboarding_decision(seen=False, auto_requested=False, gpu=unsupported, ocr_available=True)["show_welcome"])
+        self.assertFalse(onboarding_decision(seen=True, auto_requested=False, gpu=supported, ocr_available=True)["show_welcome"])
+        # No OCR engine at all: the panel is the way to get one, whatever the card.
+        self.assertTrue(onboarding_decision(seen=False, auto_requested=False, gpu=unsupported, ocr_available=False)["show_welcome"])
+
+    def test_installer_choice_is_consumed_once_and_pause_cancels_auto_download(self) -> None:
+        from fastapi.testclient import TestClient
+
+        with tempfile.TemporaryDirectory() as folder:
+            data_dir = Path(folder)
+            with patch.object(main, "DATA_DIR", data_dir), patch.object(
+                main, "_read_installer_gpu_choice", return_value=("0.7.1", "1")
+            ):
+                main._consume_installer_gpu_choice()
+                self.assertTrue((data_dir / ".gpu-ocr-auto").is_file())
+                self.assertTrue((data_dir / ".ocr-setup-seen").is_file())
+                # The same install is not acted on twice, so a later pause sticks.
+                client = TestClient(main.app)
+                response = client.post("/api/runtimes/pause", headers={"X-SubtitleYC-Token": main.API_TOKEN})
+                self.assertEqual(response.status_code, 200)
+                self.assertFalse((data_dir / ".gpu-ocr-auto").exists())
+                main._consume_installer_gpu_choice()
+                self.assertFalse((data_dir / ".gpu-ocr-auto").exists())
+            with patch.object(main, "DATA_DIR", data_dir), patch.object(
+                main, "_read_installer_gpu_choice", return_value=("0.7.2", "0")
+            ):
+                main._consume_installer_gpu_choice()
+                self.assertFalse((data_dir / ".gpu-ocr-auto").exists())

@@ -81,6 +81,8 @@
           const data = await fetchJson(`/api/runtimes/${edition.id}/download`, { method: 'POST' });
           render(data);
           schedule();
+          // The bottom bar follows the download too, so this panel can be closed.
+          window.subtitleycTrackRuntime?.();
           await finishWelcome();
           render(data);
           schedule();
@@ -104,7 +106,7 @@
         row.append(compatibility, recheck);
         const nextStep = document.createElement('p');
         nextStep.className = 'runtime-next-step';
-        nextStep.textContent = t('After installation, turn on GPU Acceleration in OCR settings.');
+        nextStep.textContent = t('GPU Acceleration is turned on automatically when the download finishes.');
         row.append(nextStep);
       }
       list.append(row);
@@ -162,6 +164,9 @@
     if (status.show_welcome) {
       setWelcome(true);
       await window.openRuntimeManager();
+    } else if (status.auto_gpu_download) {
+      // Setup's GPU OCR box was ticked: fetch it in the background, no dialog.
+      window.subtitleycStartRuntimeDownload?.('gpu-cuda-12.9');
     }
   }).catch(error => { message.textContent = error.message; });
   pause.addEventListener('click', async () => {

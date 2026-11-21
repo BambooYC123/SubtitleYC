@@ -2730,9 +2730,86 @@ def runtime_status(recheck: bool = False) -> dict[str, Any]:
     return runtime_manager.snapshot()
 
 
+GPU_EDITION = "gpu-cuda-12.9"
+
+
+def _read_installer_gpu_choice() -> tuple[str, str] | None:
+    """Setup's answer on its OCR engines page: (installer version, "1" or "0")."""
+
+    if sys.platform != "win32":
+        return None
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"Software\SubtitleYC") as key:
+            choice, _choice_type = winreg.QueryValueEx(key, "InstallerGpuOcr")
+            version, _version_type = winreg.QueryValueEx(key, "InstallerVersion")
+    except (FileNotFoundError, OSError, ImportError):
+        return None
+    choice = str(choice).strip()
+    return (str(version).strip(), choice) if choice in {"0", "1"} else None
+
+
+def _consume_installer_gpu_choice() -> None:
+    """Act once on each install's GPU OCR choice.
+
+    Ticked: remember that GPU OCR should be downloaded automatically. Either way the
+    question has been asked, so the first-launch panel is not shown again.
+    """
+
+    answer = _read_installer_gpu_choice()
+    if not answer:
+        return
+    marker_path = DATA_DIR / ".installer-gpu-choice"
+    marker = f"{answer[0]}:{answer[1]}"
+    try:
+        if marker_path.read_text(encoding="utf-8").strip() == marker:
+            return
+    except OSError:
+        pass
+    try:
+        if answer[1] == "1":
+            save_text(DATA_DIR / ".gpu-ocr-auto", "1\n")
+        else:
+            (DATA_DIR / ".gpu-ocr-auto").unlink(missing_ok=True)
+        save_text(DATA_DIR / ".ocr-setup-seen", "1\n")
+        save_text(marker_path, marker)
+    except OSError:
+        log_event("Could not record installer GPU OCR choice", category="settings", level=logging.WARNING)
+
+
+def onboarding_decision(*, seen: bool, auto_requested: bool, gpu: dict[str, Any] | None, ocr_available: bool) -> dict[str, bool]:
+    """What to do about OCR setup when the app opens.
+
+    auto_gpu_download: setup's GPU box was ticked and the package can still be installed.
+    show_welcome: only when there is something to offer, which is a supported card
+    without GPU OCR, or no OCR engine at all. PCs without a supported card are left alone.
+    """
+
+    gpu_offerable = bool(gpu and not gpu.get("installed") and (gpu.get("compatibility") or {}).get("compatible") is True)
+    auto = auto_requested and gpu_offerable
+    return {
+        "auto_gpu_download": auto,
+        "show_welcome": not seen and not auto and (gpu_offerable or not ocr_available),
+    }
+
+
 @app.get("/api/onboarding")
 def onboarding_status() -> dict[str, bool]:
-    return {"show_welcome": not (DATA_DIR / ".ocr-setup-seen").is_file()}
+    _consume_installer_gpu_choice()
+    gpu = next((edition for edition in runtime_manager.snapshot()["editions"] if edition["id"] == GPU_EDITION), None)
+    auto_path = DATA_DIR / ".gpu-ocr-auto"
+    auto_requested = auto_path.is_file()
+    if auto_requested and (gpu is None or gpu.get("installed")):
+        # Nothing left to download: the request is finished.
+        auto_path.unlink(missing_ok=True)
+        auto_requested = False
+    return onboarding_decision(
+        seen=(DATA_DIR / ".ocr-setup-seen").is_file(),
+        auto_requested=auto_requested,
+        gpu=gpu,
+        ocr_available=find_videocr_cli() is not None,
+    )
 
 
 @app.post("/api/onboarding/complete")
@@ -2753,6 +2830,8 @@ def download_runtime(edition: str) -> dict[str, Any]:
 
 @app.post("/api/runtimes/pause")
 def pause_runtime() -> dict[str, Any]:
+    # Pausing is a decision: do not restart the download by itself next launch.
+    (DATA_DIR / ".gpu-ocr-auto").unlink(missing_ok=True)
     return runtime_manager.cancel()
 
 

@@ -1,6 +1,6 @@
-# OCR runtime distribution (0.7.0)
+# OCR runtime distribution (0.7.1)
 
-The recommended download is `SubtitleYC-0.7.0-windows-setup.exe`, a small web installer. It downloads two pinned ZIPs: the app with FFmpeg/ffprobe, and CPU VideOCR. Both hashes are checked before an existing app is uninstalled. Inno Setup extracts and registers all files in one setup flow. CPU OCR is ready at first launch; GPU remains an optional in-app download.
+The recommended download is `SubtitleYC-0.7.1-windows-setup.exe`, a small web installer. It downloads two pinned ZIPs: the app with FFmpeg/ffprobe, and CPU VideOCR. Both hashes are checked before an existing app is uninstalled. Inno Setup extracts and registers all files in one setup flow. CPU OCR is ready at first launch. On supported Nvidia systems, setup can record an optional GPU OCR choice and the app starts that resumable download when it first opens.
 
 The initial EXE contains setup code and archive support rather than the large payload. Windows checks can still affect startup speed. Internet is required during setup. Failed/cancelled downloads leave the existing app intact; users can retry. Downloads are held in the setup temporary folder and cleaned up when setup exits.
 
@@ -15,7 +15,7 @@ release URLs, sizes, CLI paths and SHA-256 checksums. CPU/GPU must use the same
 VideOCR version. Keep the generated catalog with the corresponding source.
 
 Publish the web EXE, **app payload ZIP and both runtime ZIPs** to the catalog's release tag
-(initially `v0.7.0`). Do not replace runtime assets after publishing: publish a
+(currently `v0.7.1`). Do not replace runtime assets after publishing: publish a
 new app/catalog for changed binaries. Runtime hashes also serve as installation
 identities, so an app update using the same catalog hashes reuses the files.
 `-OfflineInstallers` additionally builds the full CPU/GPU setup ZIPs.
@@ -56,7 +56,7 @@ or GPU driver compatibility.
 
 CUDA downloads require a local preflight: `nvidia-smi` must report a documented GeForce GTX 16 or RTX 20–50 model and driver 576.57 or newer (the conservative full CUDA 12.9 Update 1 requirement). Other models and failed probes are described as unverified, not necessarily incompatible. The disabled GPU choice provides an explanation and a recheck button; CPU remains available. Results are cached for 30 seconds, with a fresh check before every GPU download. This preflight does not guarantee sufficient VRAM or a successful OCR run.
 
-Setup installs CPU OCR automatically. The first-launch GPU OCR panel shows CPU as ready and offers an optional Nvidia GPU download. The CPU download card appears only if CPU OCR is missing. After GPU installation, enable GPU Acceleration in OCR settings. Opening the panel never starts a download. Dismissal is stored in the workspace's `.ocr-setup-seen` marker, independently of UI settings, and survives app updates. GPU OCR remains available afterward.
+Setup installs CPU OCR automatically and shows an OCR engines page. CPU OCR is required. On a supported Nvidia GTX 16 or RTX 20–50 system with driver 576.57 or newer, GPU OCR is selected by default and can be declined. If selected, the app starts the resumable GPU package download in the bottom activity bar on first launch and enables GPU Acceleration when installation finishes. Pausing cancels the automatic request so it does not restart by itself. GPU OCR remains available afterward from the runtime panel.
 
 Native video is hidden while a modal dialog is visible in either workspace, including runtime downloads and confirmation dialogs, and restored when the modal closes. Every native preview update includes the visibility decision so playback cannot raise the video over a modal.
 
@@ -64,4 +64,4 @@ Native video is hidden while a modal dialog is visible in either workspace, incl
 
 The build measures the core app payload and includes `install-size.json`. The UI estimates app-plus-OCR disk usage from this measurement and the catalog's unpacked sizes; projects, caches, extra models and filesystem allocation overhead are excluded. For a missing runtime, required additional free space equals remaining compressed bytes plus unpacked bytes plus 256 MiB of headroom. An installed runtime requires no additional download space. CPU and GPU coexist; GPU does not replace CPU.
 
-SubtitleYC is version 0.7.0. VideOCR remains engine version 1.5.1; public package filenames use the SubtitleYC release version: `SubtitleYC-0.7.0-ocr-cpu.zip` and `SubtitleYC-0.7.0-ocr-gpu-cuda-12.9.zip`. The engine version remains in the catalog and expandable technical details for traceability. Size units are MiB/GiB.
+SubtitleYC is version 0.7.1. VideOCR remains engine version 1.5.1; public package filenames use the SubtitleYC release version: `SubtitleYC-0.7.1-ocr-cpu.zip` and `SubtitleYC-0.7.1-ocr-gpu-cuda-12.9.zip`. The engine version remains in the catalog and expandable technical details for traceability. Size units are MiB/GiB.

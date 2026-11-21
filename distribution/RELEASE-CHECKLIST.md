@@ -25,7 +25,7 @@
 
 - [ ] Publish the source repository under the MIT License.
 - [ ] Enable GitHub Issues, Discussions, and Private Vulnerability Reporting.
-- [ ] Publish `v0.7.0` from the exact tested commit.
+- [ ] Publish `v0.7.1` from the exact tested commit.
 - [ ] Upload the web EXE, app ZIP and both runtime ZIPs to the exact release tag in the embedded catalog; retain checksums and the build manifest.
 - [ ] Confirm the app payload and both runtime URLs work before promoting the release. Offer optional offline installer ZIPs if built.
 - [ ] Include CPU OCR during setup and explain the optional GPU hardware requirement and GPU Acceleration setting.

@@ -13,7 +13,7 @@ SubtitleYC is an open-source Windows desktop app for extracting, reviewing, and 
 
 ## Download
 
-Download Windows builds from [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases). Version 0.7.0 uses a small Windows web setup EXE. Setup downloads and installs the app, FFmpeg, and CPU OCR. CPU OCR is ready at first launch; Nvidia GPU OCR is optional in GPU OCR.
+Download Windows builds from [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases). Version 0.7.1 uses a small Windows web setup EXE. Setup downloads and installs the app, FFmpeg, and CPU OCR. On supported Nvidia systems, setup can also arrange a resumable GPU OCR download for the first launch.
 
 The installers and their bundled application files are distributed under the MIT License. Bundled third-party tools retain their own licences, which are included with the installation.
 
@@ -41,7 +41,7 @@ Switch to **Edit** to inspect every cue alongside the video. You can adjust cue 
 
 ## Quick Start
 
-1. Download and run `SubtitleYC-0.7.0-windows-setup.exe` while connected to the internet. Setup installs CPU OCR automatically. Open **GPU OCR** later if you want optional Nvidia GPU acceleration.
+1. Download and run `SubtitleYC-0.7.1-windows-setup.exe` while connected to the internet. Setup installs CPU OCR automatically and offers optional Nvidia GPU OCR when compatible hardware and drivers are detected.
 2. Launch `SubtitleYC.exe`.
 3. Load a video from a URL or choose a local video file.
 4. For a URL, let SubtitleYC auto-check available formats, optionally choose a specific format, and choose a download folder.
@@ -119,7 +119,7 @@ Plain `.txt` files are export-only because they do not contain timing data.
 
 ## Downloadable App
 
-Download `SubtitleYC-0.7.0-windows-setup.exe` for normal installation. It downloads and installs the app, FFmpeg, and CPU OCR during setup. Optional GPU OCR is available in **GPU OCR**.
+Download `SubtitleYC-0.7.1-windows-setup.exe` for normal installation. It downloads and installs the app, FFmpeg, and CPU OCR during setup. On a supported Nvidia PC, selecting GPU OCR starts a resumable download when SubtitleYC first opens and enables GPU Acceleration when it finishes. GPU OCR remains available later from **GPU OCR**.
 
 - **CPU** works without an Nvidia GPU.
 - **GPU CUDA 12.9** requires a supported Nvidia GTX 16 through RTX 50 GPU and compatible driver.
@@ -127,7 +127,7 @@ Download `SubtitleYC-0.7.0-windows-setup.exe` for normal installation. It downlo
 - CPU OCR is installed with the app. Optional downloaded runtimes are stored in `%LOCALAPPDATA%\SubtitleYC\runtimes`, separate from workspace cleanup, and reused across app updates when unchanged.
 - After the GPU download finishes, turn on **GPU Acceleration** in OCR settings.
 
-The `SubtitleYC-0.7.0-ocr-*.zip` release assets are downloaded by setup or the app; users normally do not need to open them manually.
+The `SubtitleYC-0.7.1-ocr-*.zip` release assets are downloaded by setup or the app; users normally do not need to open them manually.
 
 The release page also includes source archives generated automatically by GitHub. Those archives are intended for developers and are not substitutes for the Windows installers.
 
@@ -265,10 +265,10 @@ For the public release matrix, stage the matching CPU and CUDA 12.9 packages, th
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.7.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.7.1"
 ```
 
-The default public build produces a small web setup EXE, an app payload ZIP, two runtime ZIPs, and a build manifest. It packages matching CPU/GPU runtimes first and embeds their exact versioned GitHub URLs, sizes, and SHA-256 hashes in the app. Upload **all four assets to the same `v0.7.0` release** before publishing; the app cannot download unpublished assets. Add `-OfflineInstallers` to also build the complete offline installer ZIPs. Existing downloaded runtimes are reused across app updates. See [runtime distribution](docs/runtime-downloads.md) for details. FFmpeg and ffprobe remain bundled with the core app.
+The default public build produces a small web setup EXE, an app payload ZIP, two runtime ZIPs, and a build manifest. It packages matching CPU/GPU runtimes first and embeds their exact versioned GitHub URLs, sizes, and SHA-256 hashes in the app. Upload **all four assets to the same `v0.7.1` release** before publishing; the app cannot download unpublished assets. Add `-OfflineInstallers` to also build the complete offline installer ZIPs. Existing downloaded runtimes are reused across app updates. See [runtime distribution](docs/runtime-downloads.md) for details. FFmpeg and ffprobe remain bundled with the core app.
 
 Release builds install only hashes pinned in `requirements-release.txt`, run `pip check` and `pip-audit`, collect third-party license files, and verify output checksums.
 

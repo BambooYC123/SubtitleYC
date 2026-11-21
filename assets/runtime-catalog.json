@@ -1,7 +1,7 @@
 {
   "cpu": {
     "version": "1.5.1",
-    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.0/SubtitleYC-0.7.0-ocr-cpu.zip",
+    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.1/SubtitleYC-0.7.1-ocr-cpu.zip",
     "sha256": "dc127506c8356f2dc5d48e945e9f758f6e863897d18e8875a68a35a30ce9c23b",
     "size_bytes": 519704064,
     "unpacked_bytes": 1346772826,
@@ -9,7 +9,7 @@
   },
   "gpu-cuda-12.9": {
     "version": "1.5.1",
-    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.0/SubtitleYC-0.7.0-ocr-gpu-cuda-12.9.zip",
+    "url": "https://github.com/BambooYC123/SubtitleYC/releases/download/v0.7.1/SubtitleYC-0.7.1-ocr-gpu-cuda-12.9.zip",
     "sha256": "ba00482a8e7e8dfbc27e1f1fed5ed46fc987b47aa8656866544be109b96fa8a6",
     "size_bytes": 1681349910,
     "unpacked_bytes": 3843427203,

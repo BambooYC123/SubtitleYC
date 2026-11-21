@@ -14,9 +14,9 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 ## 下载
 
-0.7.0 使用小型联网安装 EXE。安装程序会下载并安装应用、FFmpeg 和 CPU OCR，首次启动即可使用 CPU OCR。可在 **GPU OCR** 面板中选择下载 Nvidia GPU 运行库，以加快 OCR；安装后请在 OCR 设置中开启 **GPU 加速**。
+0.7.1 使用小型联网安装 EXE。安装程序会下载并安装应用、FFmpeg 和 CPU OCR。在检测到受支持的 Nvidia 显卡和驱动时，也可在安装期间选择 GPU OCR；SubtitleYC 首次启动时会继续可暂停、可恢复的下载，并在完成后自动开启 **GPU 加速**。
 
-请从 [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases) 下载 Windows 版本，只需下载 `SubtitleYC-0.7.0-windows-setup.exe`。CPU OCR 无需 Nvidia GPU；可选的 GPU OCR 可在支持的 Nvidia 系统上提供更快的 OCR 速度。
+请从 [GitHub Releases](https://github.com/BambooYC123/SubtitleYC/releases) 下载 Windows 版本，只需下载 `SubtitleYC-0.7.1-windows-setup.exe`。CPU OCR 无需 Nvidia GPU；可选的 GPU OCR 可在支持的 Nvidia 系统上提供更快的 OCR 速度。
 
 安装程序及其捆绑的 SubtitleYC 应用文件依据 MIT 许可证分发。捆绑的第三方工具继续适用各自的许可证，相关许可证会随安装文件一同提供。
 
@@ -44,7 +44,7 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 ## 快速开始
 
-1. 联网下载并运行 `SubtitleYC-0.7.0-windows-setup.exe`。CPU OCR 会自动安装。需要 Nvidia GPU 加速时，打开 **GPU OCR** 下载 CUDA 12.9 运行库，安装后开启 **GPU 加速**。
+1. 联网下载并运行 `SubtitleYC-0.7.1-windows-setup.exe`。CPU OCR 会自动安装；检测到兼容的 Nvidia 显卡和驱动时，安装程序会提供可选的 GPU OCR。
 2. 启动 `SubtitleYC.exe`。
 3. 通过网址加载视频，或选择本地视频文件。
 4. 如果使用网址，让 SubtitleYC 自动检查可用格式；也可以选择特定格式和下载文件夹。
@@ -124,8 +124,8 @@ SubtitleYC 是一款开源 Windows 桌面应用，用于从视频中的硬字幕
 
 使用联网安装程序安装应用和 CPU OCR：
 
-- `SubtitleYC-0.7.0-windows-setup.exe`：安装程序自动下载并安装应用、FFmpeg 和 CPU OCR。
-- `SubtitleYC-0.7.0-windows-app.zip`、`SubtitleYC-0.7.0-ocr-cpu.zip` 和 `SubtitleYC-0.7.0-ocr-gpu-cuda-12.9.zip`：由安装程序或应用下载使用的文件，不是独立安装程序。
+- `SubtitleYC-0.7.1-windows-setup.exe`：安装程序自动下载并安装应用、FFmpeg 和 CPU OCR。
+- `SubtitleYC-0.7.1-windows-app.zip`、`SubtitleYC-0.7.1-ocr-cpu.zip` 和 `SubtitleYC-0.7.1-ocr-gpu-cuda-12.9.zip`：由安装程序或应用下载使用的文件，不是独立安装程序。
 
 CPU OCR 随应用安装。可选 GPU 运行库存储在 `%LOCALAPPDATA%\SubtitleYC\runtimes`，更新后可继续复用。CPU 无需英伟达显卡；CUDA 12.9 需要受支持的显卡和驱动，面板会检查兼容性。安装 GPU 运行库后，请开启 GPU 加速。
 
@@ -258,10 +258,10 @@ workspace\settings.json
   -GpuCuda129VideOCRCliPath "C:\VideOCR-Staging\videocr-cli-GPU-v1.5.1-CUDA-12.9\videocr-cli.exe" `
   -FFmpegPath "C:\FFmpeg-Shared\bin\ffmpeg.exe" `
   -FFprobePath "C:\FFmpeg-Shared\bin\ffprobe.exe" `
-  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.7.0"
+  -ArtifactsRoot "D:\SubtitleYCBuild\SubtitleYC-0.7.1"
 ```
 
-默认构建生成一个小型联网安装 EXE、一个应用包 ZIP、两个 OCR 运行库 ZIP，以及构建清单。脚本先打包相同版本的 CPU/GPU 运行库，再将下载地址、大小和 SHA-256 校验值嵌入应用。请将**全部四个文件上传到同一个 `v0.7.0` 发布页**，再公开发布；应用无法下载尚未发布的文件。已下载的运行库在应用更新后可继续复用。详见[运行库分发说明](docs/runtime-downloads.md)。加上 `-OfflineInstallers` 可额外构建完整离线安装 ZIP。FFmpeg 仍包含在核心安装程序中。使用 `-ArtifactsRoot` 指定空间充足的构建目录。
+默认构建生成一个小型联网安装 EXE、一个应用包 ZIP、两个 OCR 运行库 ZIP，以及构建清单。脚本先打包相同版本的 CPU/GPU 运行库，再将下载地址、大小和 SHA-256 校验值嵌入应用。请将**全部四个文件上传到同一个 `v0.7.1` 发布页**，再公开发布；应用无法下载尚未发布的文件。已下载的运行库在应用更新后可继续复用。详见[运行库分发说明](docs/runtime-downloads.md)。加上 `-OfflineInstallers` 可额外构建完整离线安装 ZIP。FFmpeg 仍包含在核心安装程序中。使用 `-ArtifactsRoot` 指定空间充足的构建目录。
 
 发布构建只安装 `requirements-release.txt` 中带哈希锁定的依赖项，运行 `pip check` 和 `pip-audit`，收集第三方许可证文件，并验证输出校验值。
 
